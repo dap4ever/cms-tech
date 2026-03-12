@@ -11,6 +11,21 @@ import {
 } from 'lucide-react';
 import styles from './task.module.css';
 
+// Reescreve URLs de imagens Taskrow para usar nosso proxy local (necessário pois img tags não podem enviar headers auth)
+function rewriteTaskrowImages(html: string): string {
+  if (!html) return html;
+  // Cobre todas as variantes: https://host/File/..., /File/... e File/... (relativa)
+  return html.replace(
+    /src=["'](?:https?:\/\/[^/]+\/|\/)?File\/TaskImageByGuid\/\?identification=([^&"']+)&(?:amp;)?mimeType=([^&"']+)(?:[^"']*)["']/gi,
+    (_match, identification, mimeType) => {
+      const id = decodeURIComponent(identification);
+      const mime = decodeURIComponent(mimeType);
+      const proxied = `/api/taskrow/image?identification=${encodeURIComponent(id)}&mimeType=${encodeURIComponent(mime)}`;
+      return `src="${proxied}"`;
+    }
+  );
+}
+
 // Função utilitária para buscar no server-side embutida na página para evitar a barreira do fetch interno em localhost no Next 14+
 async function getTaskData(taskId: string) {
   const host = process.env.TASKROW_HOST || '';
@@ -33,51 +48,46 @@ async function getTaskData(taskId: string) {
     };
   }
 
-  const numericId = taskId.replace('TR-', '');
-  const url = `https://${host}/api/v2/search/tasks/advancedsearch`;
+  const numericId = taskId;
+  // Busca do nosso novo Proxy Backend que já faz o merge da lista + TaskDetail Oficial
+  const url = `http://localhost:3000/api/taskrow/task/${numericId}`;
   
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      '__identifier': token,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ TaskIDs: [numericId] })
-  });
+  const res = await fetch(url, { cache: 'no-store' });
 
-  if (!res.ok) throw new Error(`Erro API Taskrow: ${res.status}`);
+  if (!res.ok) throw new Error(`Erro API Proxied: ${res.status}`);
 
   const payload = await res.json();
-  let rawTasks = [];
-  if (Array.isArray(payload)) rawTasks = payload;
-  else if (payload.data && Array.isArray(payload.data)) rawTasks = payload.data;
-  else if (payload.items && Array.isArray(payload.items)) rawTasks = payload.items;
-
-  if (rawTasks.length === 0) throw new Error('Tarefa não encontrada');
+  if (!payload.success) throw new Error(payload.error || 'Tarefa não encontrada');
   
-  const taskData = rawTasks[0];
+  const rootTask = payload.summary;
+  const taskData = rootTask;
+  
   return {
-    id: `TR-${taskData.taskID || taskData.TaskID}`,
+    id: `TR-${taskData.taskID || taskData.TaskID}` !== 'TR-undefined' ? `TR-${taskData.taskID || taskData.TaskID}` : taskId,
     title: taskData.taskTitle || taskData.title || 'Sem título',
-    description: taskData.taskDescription || taskData.description || 'Esta tarefa não possui descrição ou a permissão para leitura detalhada está bloqueada.',
     status: taskData.pipelineStep || 'A Fazer',
     priority: taskData.priority || taskData.Priority || 'Normal',
     client: taskData.clientNickname || 'Geral',
     owner: taskData.ownerUserLogin ? taskData.ownerUserLogin : 'Não Alocado',
-    job: taskData.jobNumber || 'N/A',
+    creationUser: taskData.creationUserLogin || 'Usuário',
+    job: taskData.jobDisplayTitle || taskData.jobNumber || 'N/A',
     hoursTracked: Math.floor(Math.random() * 20), 
     hoursEstimated: Math.floor(Math.random() * 40) + 10,
     createdDate: taskData.creationDate || taskData.created_at || 'Data desconhecida',
     dueDate: taskData.dueDate || taskData.due_date || 'Nenhuma',
+    details: payload.details?.TaskData || null,
   };
 }
 
-export default async function TaskDetail({ params }: { params: { id: string } }) {
+export default async function TaskDetail(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const { id } = params;
+  
   let task = null;
   let errorMsg = null;
 
   try {
-    task = await getTaskData(params.id);
+    task = await getTaskData(id);
   } catch (err: any) {
     errorMsg = err.message || 'Erro ao processar dados da tarefa';
   }
@@ -108,13 +118,109 @@ export default async function TaskDetail({ params }: { params: { id: string } })
       </header>
 
       <div className={styles.grid}>
-        {/* Coluna Principal da Descrição */}
+        {/* Coluna Principal da Descrição e Chat */}
         <div className={styles.mainCol}>
+          
+          {/* Anexos Principais (Galeria) */}
+          {task.details?.TaskAttachments?.length > 0 && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Anexos da Tarefa</h2>
+              <div className={styles.gallery}>
+                 {task.details.TaskAttachments.map((att: any, idx: number) => {
+                    const isImage = att.MimeType?.startsWith('image/');
+                    const imageUrl = `/api/taskrow/image?identification=${encodeURIComponent(att.Identification)}&mimeType=${encodeURIComponent(att.MimeType || 'image/png')}`;
+                    const downloadUrl = `/api/taskrow/image?identification=${encodeURIComponent(att.Identification)}&mimeType=${encodeURIComponent(att.MimeType || 'image/png')}&download=1`;
+
+                    return (
+                      <div key={idx} className={styles.attachmentItem}>
+                         {isImage ? (
+                           <a href={imageUrl} target="_blank" rel="noopener noreferrer" className={styles.imagePreview}>
+                              <img src={imageUrl} alt={att.Name} />
+                           </a>
+                         ) : (
+                           <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className={styles.fileIcon}>📄</a>
+                         )}
+                         <div className={styles.attachmentMeta}>
+                            <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className={styles.attachmentName}>
+                               {att.Name || `Anexo_${idx}`}
+                            </a>
+                            <span className={styles.attachmentSize}>{att.SizeInKB ? `${att.SizeInKB} KB` : ''}</span>
+                         </div>
+                      </div>
+                    );
+                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Chat Timeline (NewTaskItems) */}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Descrição da Demanda</h2>
-            <div className={styles.descriptionContent}>
-              {/* Numa versão real com Markdown, usariamos {react-markdown} ou {dangerouslySetInnerHTML} */}
-              <p>{task.description}</p>
+            <h2 className={styles.cardTitle}>Histórico e Atualizações</h2>
+            
+            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+               {task.details?.NewTaskItems ? task.details.NewTaskItems.map((item: any, i: number) => {
+                  let actorName = item.CreationUserLogin || item.NewOwnerName || task.owner;
+                  if (item.Request && item.Request.CreationUserLogin) actorName = item.Request.CreationUserLogin;
+                  
+                  // Se for o primeiro item, assumimos que é a criação (ex: Sofia May, 2 meses atrás)
+                  const isFirst = i === task.details.NewTaskItems.length - 1;
+                  
+                  if (!item.TaskItemComment && !item.NewOwnerName && !item.PipelineStepID) return null;
+                  
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: '16px', borderLeft: isFirst ? '2px solid #f59e0b' : '2px solid var(--border-color)', paddingLeft: '16px', marginLeft: '8px' }}>
+                       <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                             <div className={styles.avatar} style={{ width: 24, height: 24, fontSize: '0.6rem' }}>{actorName.substring(0,2).toUpperCase()}</div>
+                             <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{actorName}</strong>
+                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {item.Date ? new Date(parseInt(item.Date.match(/\d+/)[0], 10)).toLocaleString('pt-BR') : 'Data desconhecida'} 
+                             </span>
+                          </div>
+                          
+                          {/* Modificações Sistêmicas Misto no Chat */}
+                          {item.NewOwnerName && (
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', fontStyle: 'italic' }}>
+                                 → Transferiu a responsabilidade para <strong>{item.NewOwnerName}</strong>
+                              </div>
+                          )}
+
+                          {item.TaskItemComment && (
+                            <div 
+                               style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, background: isFirst ? 'var(--bg-main)' : 'transparent', padding: isFirst ? '16px' : '0', borderRadius: '8px', whiteSpace: 'pre-wrap' }}
+                               dangerouslySetInnerHTML={{ __html: rewriteTaskrowImages(item.TaskItemComment) }} 
+                            />
+                          )}
+
+                           {/* Anexos que vieram soltos neste comentário em específico */}
+                           {item.Attachments?.length > 0 && (
+                              <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                {item.Attachments.map((subA: any, sx: number) => {
+                                   const isImg = subA.MimeType?.startsWith('image/');
+                                   const iUrl = `/api/taskrow/image?identification=${encodeURIComponent(subA.Identification)}&mimeType=${encodeURIComponent(subA.MimeType || 'image/png')}`;
+                                   const dUrl = `/api/taskrow/image?identification=${encodeURIComponent(subA.Identification)}&mimeType=${encodeURIComponent(subA.MimeType || 'image/png')}&download=1`;
+                                   
+                                   return (
+                                     <div key={sx} className={styles.chatAttachment}>
+                                        {isImg && (
+                                           <div className={styles.chatImageWrapper}>
+                                              <img src={iUrl} alt={subA.Name} />
+                                           </div>
+                                        )}
+                                        <a href={dUrl} target="_blank" rel="noopener noreferrer" className={styles.chatAttachmentLink}>
+                                           📎 {subA.Name || `Anexo #${sx}`}
+                                        </a>
+                                     </div>
+                                   );
+                                })}
+                              </div>
+                           )}
+                       </div>
+                    </div>
+                  );
+               }).reverse() : (
+                  <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Nenhum comentário ou atualização registrado.</p>
+               )}
             </div>
           </div>
         </div>
@@ -122,15 +228,15 @@ export default async function TaskDetail({ params }: { params: { id: string } })
         {/* Coluna Sidebar Lateral de Informações Técnicas */}
         <div className={styles.sideCol}>
           <div className={styles.card}>
-            <h3 className={styles.sideTitle}>Responsável (Dev)</h3>
+            <h3 className={styles.sideTitle}>Responsável atual</h3>
             <div className={styles.userRow}>
-              <div className={styles.avatar}>{task.owner.substring(0,2)}</div>
+              <div className={styles.avatar}>{task.owner.substring(0,2).toUpperCase()}</div>
               <span className={styles.userName}>{task.owner}</span>
             </div>
           </div>
 
           <div className={styles.card}>
-            <h3 className={styles.sideTitle}>Controle de Esforço (Horas) <span title="Seu Token atual do Taskrow está restrito para ler Timesheets" style={{cursor: 'help', color: 'orange'}}>⚠️ Mock</span></h3>
+            <h3 className={styles.sideTitle}>Contador de Esforço (Horas) <span title="Seu Token atual do Taskrow está restrito para ler Timesheets" style={{cursor: 'help', color: 'orange'}}>⚠️ Mock</span></h3>
             <div className={styles.progressHeader}>
               <span className={styles.timeLabel}>
                 <strong>{task.hoursTracked}h</strong> trackeadas

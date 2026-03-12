@@ -86,7 +86,8 @@ export default function Projects() {
     if (approvedTasks.has(task.id)) return false;
 
     // 1. Filtro Fixo/Hardcoded: Mostrar APENAS demandas da Raissa, Ingrid e Kaique
-    const login = (task.assigneeLogin || '').toLowerCase();
+    const rawLogin = task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '';
+    const login = rawLogin.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const isTechOwner = login.includes('ingrid') || login.includes('raissa') || login.includes('kaique');
     
     if (!isTechOwner) return false;
@@ -100,10 +101,10 @@ export default function Projects() {
        if (!mId.includes(term) && !mTitle.includes(term) && !mClient.includes(term)) return false;
     }
 
-    // 3. Filtro de Empresa (Cliente) Mapeado contra ClientID do RAW
+    // 3. Filtro de Empresa (Cliente) via ClientNickname (Precedência do Documento)
     if (filterClient) {
-       const cID = task.rawData?.clientID || task.rawData?.ClientID;
-       if (cID && cID.toString() !== filterClient) return false;
+       const cNick = String(task.rawData?.clientNickName || task.rawData?.clientNickname || task.rawData?.jobClientNickName || task.rawData?.clientDisplayName || task.client || '').toLowerCase();
+       if (cNick !== filterClient.toLowerCase() && !cNick.includes(filterClient.toLowerCase())) return false;
     }
 
     // 4. Filtro de Projeto (Job) Mapeado contra JobID do RAW
@@ -183,11 +184,11 @@ export default function Projects() {
               className={styles.filterInput}
             />
 
-            {/* Por Empresa */}
+            {/* Por Empresa (Usando ClientNickName como valor de busca) */}
             <select className={styles.filterSelect} value={filterClient} onChange={(e) => setFilterClient(e.target.value)}>
               <option value="">Por empresa</option>
               {clientsData.sort((a:any, b:any) => a.ClientName.localeCompare(b.ClientName)).map((c: any) => 
-                 <option key={c.ClientID} value={c.ClientID}>{c.ClientName}</option>
+                 <option key={c.ClientID} value={c.ClientNickName}>{c.ClientName}</option>
               )}
             </select>
             {/* Por Projeto */}
@@ -214,54 +215,119 @@ export default function Projects() {
           <p>Sincronizando tarefas com o Taskrow...</p>
         </div>
       ) : (
-        <section className={styles.kanbanBoard}>
-          {columns.map(col => {
-            const columnTasks = filteredTasks.filter(t => t.column === col.id);
-            return (
-              <div key={col.id} className={styles.kanbanColumn}>
-                <div className={styles.columnHeader}>
-                  <span className={styles.columnTitle}>{col.title}</span>
-                  <span className={styles.columnCount}>{columnTasks.length}</span>
-                </div>
-                <div className={styles.columnContent}>
-                  {columnTasks.map(task => (
-                    <Link href={`/taskrow/task/${task.id}`} key={task.id} className={styles.taskCardLink}>
-                      <div className={styles.taskCard}>
-                        <div className={styles.taskHeader}>
-                          <span className={styles.taskId}>{task.id}</span>
-                          <div className={`${styles.taskPriority} ${getPriorityClass(task.priority)}`}></div>
-                        </div>
-                        <h3 className={styles.taskTitle}>{task.title}</h3>
-                        <div className={styles.taskTags}>
-                          {task.tags.map((tag, idx) => (
-                            <span key={idx} className={styles.tag}>{tag}</span>
-                          ))}
-                        </div>
-                        <div className={styles.taskFooter}>
-                          <button 
-                            className={styles.approveBtn} 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleApprove(task);
-                            }}
-                            title="Aprovar para Início e mover para Meus Projetos"
-                          >
-                            <CheckCircle size={14} style={{ marginRight: 6 }} />
-                            Aprovar Sprint
-                          </button>
+        <>
+          {/* Métricas como as do screenshot */}
+          <div className={styles.metricsBar}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricValue}>{filteredTasks.length}</div>
+              <div className={styles.metricLabel}>Demandas Listadas</div>
+            </div>
+            <div className={styles.metricCard}>
+               <div className={styles.metricValue}>
+                 {filteredTasks.filter(t => new Date(t.dueDate) < new Date() && new Date(t.dueDate).getFullYear() > 2000).length}
+               </div>
+               <div className={styles.metricLabel}>Tarefas Atrasadas</div>
+            </div>
+            <div className={styles.metricCard}>
+               <div className={styles.metricValue}>
+                 {filteredTasks.filter(t => new Date(t.dueDate) >= new Date() && new Date(t.dueDate).getTime() <= new Date().getTime() + 7*24*60*60*1000).length}
+               </div>
+               <div className={styles.metricLabel}>Para os próximos 7 dias</div>
+            </div>
+          </div>
 
-                          <div className={styles.taskAssignee} title={task.assignee === '??' ? 'Sem responsável' : `Responsável: ${task.assignee}`}>
-                            {task.assignee}
-                          </div>
-                        </div>
+          {/* Tabela de Listagem */}
+          <div className={styles.taskTable}>
+            <div className={styles.tableHead}>
+              <div>Tarefa</div>
+              <div>Empresa / Projeto</div>
+              <div>Solicitação</div>
+              <div>Responsável / Prioridade</div>
+              <div>Fase / Etapa</div>
+              <div>Prazo</div>
+              <div>Ação</div>
+            </div>
+            
+            {filteredTasks.map(task => {
+              // Determina cores das tags
+              const reqBadge = task.rawData?.requestTypeAcronym ? `[${task.rawData?.requestTypeAcronym}]` : '[TEC]';
+              const reqName = task.rawData?.requestTypeName || 'Solicitação de Tecnologia';
+              const jobTitle = task.rawData?.jobTitle || task.rawData?.JobTitle || task.client;
+              const isLate = new Date(task.dueDate) < new Date();
+              const datePillClass = `${styles.datePill} ${!isLate ? styles.onTime : ''}`;
+
+              return (
+                <div key={task.id} style={{textDecoration: 'none', color: 'inherit'}}>
+                  <div className={styles.taskRow} onClick={() => window.location.href = `/taskrow/task/${task.id}`}>
+                    {/* 1. Tarefa */}
+                    <div className={styles.cellCol}>
+                      <div className={styles.cellTitle}>
+                        <GitPullRequest size={14} style={{color:'var(--text-secondary)'}}/>
+                        {task.id.replace('TR-','#')} | {task.title}
                       </div>
-                    </Link>
-                  ))}
+                      <div className={styles.cellSubtitle}>
+                         {task.id} {task.title}
+                      </div>
+                    </div>
+
+                    {/* 2. Empresa / Projeto */}
+                    <div className={styles.cellCol}>
+                      <div className={styles.cellTitle}>{task.client}</div>
+                      <div className={styles.cellSubtitle}>#{task.rawData?.jobNumber || task.rawData?.JobNumber || '00'} {jobTitle}</div>
+                    </div>
+
+                    {/* 3. Solicitação */}
+                    <div className={styles.cellCol}>
+                      <div className={styles.cellTitle}>
+                        <span style={{color: '#f59e0b', marginRight: 4}}>{reqBadge}</span> {reqName}
+                      </div>
+                      <div className={styles.cellSubtitle}>
+                        {task.tags.join(', ')}
+                      </div>
+                    </div>
+
+                    {/* 4. Reponsável / Prioridade */}
+                    <div className={styles.cellCol}>
+                      <div className={styles.cellTitle}>
+                         {task.rawData?.ownerUserLogin || task.assigneeLogin}
+                      </div>
+                      <div className={styles.cellSubtitle}>
+                         Tecnologia  
+                         <span className={getPriorityClass(task.priority)} style={{display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginLeft: 8}}></span>
+                      </div>
+                    </div>
+
+                    {/* 5. Fase / Etapa */}
+                    <div className={styles.cellCol}>
+                      <div className={styles.cellTitle} style={{fontWeight: 500}}>
+                         {task.statusOriginal}
+                      </div>
+                    </div>
+
+                    {/* 6. Prazo */}
+                    <div className={styles.cellCol}>
+                      <div className={datePillClass}>
+                        {new Date(task.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                      </div>
+                    </div>
+
+                    {/* 7. Ação */}
+                    <div className={styles.cellCol}>
+                       <button 
+                          className={styles.approveBtn} 
+                          onClick={(e) => { e.stopPropagation(); handleApprove(task); }}
+                          title="Aprovar para Início e mover para Meus Projetos"
+                        >
+                          <CheckCircle size={14} /> Aprovar
+                        </button>
+                    </div>
+
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </section>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

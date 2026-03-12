@@ -189,3 +189,123 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
   font-weight: 500;
 }
+
+/* Galeria de Anexos */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.attachmentItem {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.attachmentItem:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+}
+
+.imagePreview {
+  width: 100%;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.imagePreview:hover {
+  opacity: 0.9;
+}
+
+.imagePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fileIcon {
+  width: 100%;
+  aspect-ratio: 16/10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: var(--bg-surface);
+}
+
+.attachmentMeta {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attachmentName {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.attachmentName:hover {
+  color: var(--accent-primary);
+}
+
+.attachmentSize {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+/* Chat Attachments */
+.chatAttachment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  max-width: 250px;
+}
+
+.chatImageWrapper {
+  width: 100%;
+  max-height: 150px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.chatImageWrapper img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chatAttachmentLink {
+  font-size: 0.75rem;
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.chatAttachmentLink:hover {
+  text-decoration: underline;
+}

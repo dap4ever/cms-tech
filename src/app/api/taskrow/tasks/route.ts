@@ -57,20 +57,17 @@ export async function GET(request: Request) {
     const allRawTasks: TaskrowRawTask[] = [];
     const startDate = getStartDateMinus2Months();
 
-    // 2. BUSCANDO TODAS AS TAREFAS ABERTAS COM PAGINAÇÃO
-    let pageNumber = 1;
+    // 2. BUSCANDO TODAS AS TAREFAS ABERTAS COM PAGINAÇÃO POR OFFSET
+    let currentOffset = 0;
     let hasMoreItems = true;
-    const MAX_PAGES = 5; // Proteção contra timeout de Serverless Function (> 1000 tasks abertas)
+    const MAX_PAGES = 10; // Evitar loop infinito (2000 tasks)
+    let requestsCount = 0;
 
-    while (hasMoreItems && pageNumber <= MAX_PAGES) {
+    while (hasMoreItems && requestsCount < MAX_PAGES) {
+      requestsCount++;
       const bodyPayload = {
         Closed: false,
-        // Remover StartDate temporariamente para garantir que tarefas "envelhecidas" mas abertas também venham
-        // StartDate: startDate, 
-        Pagination: {
-          PageNumber: pageNumber,
-          PageSize: 500
-        }
+        Offset: currentOffset
       };
 
       const res = await fetch(`${baseUrl}/api/v2/search/tasks/advancedsearch`, {
@@ -80,24 +77,24 @@ export async function GET(request: Request) {
       });
 
       if (!res.ok) {
-        console.warn(`[Proxy] Falha na busca global (Status: ${res.status}) na página ${pageNumber}`);
+        console.warn(`[Proxy] Falha na busca global (Status: ${res.status}) no offset ${currentOffset}`);
         break;
       }
 
       const payload = await res.json();
       let pageTasks: TaskrowRawTask[] = [];
       
-      if (Array.isArray(payload)) pageTasks = payload;
-      else if (payload.data && Array.isArray(payload.data)) pageTasks = payload.data;
-      else if (payload.items && Array.isArray(payload.items)) pageTasks = payload.items;
+      if (Array.isArray(payload.Data)) pageTasks = payload.Data;
+      else if (Array.isArray(payload.data)) pageTasks = payload.data;
+      else if (Array.isArray(payload)) pageTasks = payload;
       
       allRawTasks.push(...pageTasks);
 
-      // A API Taskrow silenciosamente capa o payload em 200 itens mesmo se pedirmos 500.
-      if (pageTasks.length < 200) {
-        hasMoreItems = false; // Finalizou
+      // Usando o campo NextOffset oficial documentado
+      if (payload.NextOffset || payload.nextOffset) {
+         currentOffset = payload.NextOffset || payload.nextOffset;
       } else {
-        pageNumber++;
+         hasMoreItems = false;
       }
     }
 
