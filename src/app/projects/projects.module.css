@@ -57,9 +57,53 @@
   transition: all 0.2s ease;
 }
 
-.btnSecondary:hover {
+.btnSecondary:hover, .btnActive {
   background-color: var(--bg-surface-hover);
   border-color: var(--text-secondary);
+}
+
+/* Filter Bar */
+.filterBar {
+  display: flex;
+  gap: 12px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.filterInput, .filterSelect {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  min-width: 150px;
+}
+
+.filterInput:focus, .filterSelect:focus {
+  border-color: var(--accent-primary);
+}
+
+.clearBtn {
+  background: transparent;
+  color: var(--status-error);
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 12px;
+  opacity: 0.8;
+}
+
+.clearBtn:hover {
+  text-decoration: underline;
+  opacity: 1;
 }
 
 /* Kanban Board */
@@ -115,6 +159,12 @@
 }
 
 /* Cards */
+.taskCardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
 .taskCard {
   background-color: var(--bg-main);
   border: 1px solid var(--border-color);
@@ -216,4 +266,34 @@
   font-size: 0.65rem;
   font-weight: 700;
   color: white;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  color: var(--text-secondary);
+  gap: 16px;
+}
+
+.loadingIcon {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
+.errorMessage {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--status-error);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 0.875rem;
 }
