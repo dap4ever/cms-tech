@@ -9,12 +9,14 @@ import {
   Users, 
   FileText, 
   BarChart2, 
-  Settings
+  Settings,
+  Inbox
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const navItems = [
   { name: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
+  { name: 'Caixa de Entrada', route: '/taskrow', icon: Inbox },
   { name: 'Projetos', route: '/projects', icon: KanbanSquare },
   { name: 'Repositórios', route: '/repos', icon: GitPullRequest },
   { name: 'Times', route: '/teams', icon: Users },

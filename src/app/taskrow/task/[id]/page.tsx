@@ -93,8 +93,8 @@ export default async function TaskDetail({ params }: { params: { id: string } })
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <Link href="/projects" className={styles.backButton}>
-          <ArrowLeft size={16} /> Voltar para o Quadro
+        <Link href="/taskrow" className={styles.backButton}>
+          <ArrowLeft size={16} /> Voltar para o Caixa de Entrada
         </Link>
         <div className={styles.titleSection}>
           <span className={styles.taskId}>{task.id}</span>
