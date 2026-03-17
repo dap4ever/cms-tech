@@ -122,6 +122,16 @@
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 500px; /* Garante área de drop mesmo vazia */
+}
+
+/* Feedback visual ao arrastar sobre a coluna */
+.columnDragOver {
+  background-color: rgba(139, 92, 246, 0.05);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 8px 32px rgba(139, 92, 246, 0.1);
+  transform: scale(1.01);
 }
 
 .columnHeader {
@@ -171,13 +181,28 @@
   border-radius: var(--radius-md);
   padding: 16px;
   cursor: grab;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.2s ease,
+              opacity 0.2s ease;
+  user-select: none;
 }
 
 .taskCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
   border-color: var(--accent-primary);
+}
+
+.taskCard:active {
+  cursor: grabbing;
+}
+
+/* Estado de arraste */
+.cardDragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  border: 2px dashed var(--accent-primary) !important;
 }
 
 .taskHeader {
@@ -296,4 +321,50 @@
   margin-bottom: 24px;
   border: 1px solid rgba(239, 68, 68, 0.2);
   font-size: 0.875rem;
+}
+
+/* Menu de Contexto Customizado */
+.contextMenu {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  backdrop-filter: blur(12px);
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.contextMenuItem:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: var(--status-error);
 }

@@ -10,6 +10,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import styles from './task.module.css';
+import { TimeTracker } from '@/components/task/TimeTracker';
 
 // Reescreve URLs de imagens Taskrow para usar nosso proxy local (necessário pois img tags não podem enviar headers auth)
 function rewriteTaskrowImages(html: string): string {
@@ -79,9 +80,14 @@ async function getTaskData(taskId: string) {
   };
 }
 
-export default async function TaskDetail(props: { params: Promise<{ id: string }> }) {
+export default async function TaskDetail(props: { 
+  params: Promise<{ id: string }>,
+  searchParams: Promise<{ from?: string }>
+}) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
   const { id } = params;
+  const isFromProjects = searchParams.from === 'projects';
   
   let task = null;
   let errorMsg = null;
@@ -103,8 +109,8 @@ export default async function TaskDetail(props: { params: Promise<{ id: string }
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <Link href="/taskrow" className={styles.backButton}>
-          <ArrowLeft size={16} /> Voltar para o Caixa de Entrada
+        <Link href={isFromProjects ? "/projects" : "/taskrow"} className={styles.backButton}>
+          <ArrowLeft size={16} /> {isFromProjects ? "Voltar para Projetos" : "Voltar para o Caixa de Entrada"}
         </Link>
         <div className={styles.titleSection}>
           <span className={styles.taskId}>{task.id}</span>
@@ -187,7 +193,12 @@ export default async function TaskDetail(props: { params: Promise<{ id: string }
 
                           {item.TaskItemComment && (
                             <div 
-                               style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, background: isFirst ? 'var(--bg-main)' : 'transparent', padding: isFirst ? '16px' : '0', borderRadius: '8px', whiteSpace: 'pre-wrap' }}
+                               className={styles.commentText}
+                               style={{ 
+                                 background: isFirst ? 'var(--bg-main)' : 'transparent', 
+                                 padding: isFirst ? '16px' : '0', 
+                                 borderRadius: '8px' 
+                               }}
                                dangerouslySetInnerHTML={{ __html: rewriteTaskrowImages(item.TaskItemComment) }} 
                             />
                           )}
@@ -227,6 +238,11 @@ export default async function TaskDetail(props: { params: Promise<{ id: string }
 
         {/* Coluna Sidebar Lateral de Informações Técnicas */}
         <div className={styles.sideCol}>
+          <TimeTracker 
+            taskId={task.id} 
+            initialHoursEstimated={task.hoursEstimated} 
+          />
+
           <div className={styles.card}>
             <h3 className={styles.sideTitle}>Responsável atual</h3>
             <div className={styles.userRow}>
