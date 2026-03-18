@@ -9,12 +9,23 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/genai": "^1.45.0",
+    "@prisma/client": "^5.13.0",
+    "bcryptjs": "^3.0.3",
+    "dompurify": "^3.3.3",
+    "dotenv": "^17.3.1",
+    "isomorphic-dompurify": "^3.4.0",
+    "jose": "^6.2.1",
     "lucide-react": "^0.577.0",
+    "marked": "^17.0.4",
     "next": "16.1.6",
+    "pg": "^8.20.0",
+    "prisma": "^5.13.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

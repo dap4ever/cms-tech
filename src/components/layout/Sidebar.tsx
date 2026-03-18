@@ -13,6 +13,7 @@ import {
   Inbox
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
@@ -27,6 +28,17 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  // Função para pegar as iniciais do nome
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <aside className={styles.sidebar}>
@@ -62,10 +74,12 @@ export function Sidebar() {
       </div>
 
       <div className={styles.userProfile}>
-        <div className={styles.avatar}>JD</div>
+        <div className={styles.avatar}>
+          {user ? getInitials(user.name) : '...'}
+        </div>
         <div className={styles.userInfo}>
-          <span className={styles.userName}>João Dev</span>
-          <span className={styles.userRole}>Tech Lead</span>
+          <span className={styles.userName}>{user?.name || 'Carregando...'}</span>
+          <span className={styles.userRole}>{user?.role || 'Aguardando...'}</span>
         </div>
       </div>
     </aside>

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import styles from './task.module.css';
 import { TimeTracker } from '@/components/task/TimeTracker';
+import { ObservationSection } from '@/components/task/ObservationSection';
+import { TaskHistory } from '@/components/task/TaskHistory';
 
 // Reescreve URLs de imagens Taskrow para usar nosso proxy local (necessário pois img tags não podem enviar headers auth)
 function rewriteTaskrowImages(html: string): string {
@@ -127,6 +129,8 @@ export default async function TaskDetail(props: {
         {/* Coluna Principal da Descrição e Chat */}
         <div className={styles.mainCol}>
           
+          <ObservationSection taskId={task.id} historyItems={task.details?.NewTaskItems || []} />
+
           {/* Anexos Principais (Galeria) */}
           {task.details?.TaskAttachments?.length > 0 && (
             <div className={styles.card}>
@@ -162,77 +166,7 @@ export default async function TaskDetail(props: {
           {/* Chat Timeline (NewTaskItems) */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Histórico e Atualizações</h2>
-            
-            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-               {task.details?.NewTaskItems ? task.details.NewTaskItems.map((item: any, i: number) => {
-                  let actorName = item.CreationUserLogin || item.NewOwnerName || task.owner;
-                  if (item.Request && item.Request.CreationUserLogin) actorName = item.Request.CreationUserLogin;
-                  
-                  // Se for o primeiro item, assumimos que é a criação (ex: Sofia May, 2 meses atrás)
-                  const isFirst = i === task.details.NewTaskItems.length - 1;
-                  
-                  if (!item.TaskItemComment && !item.NewOwnerName && !item.PipelineStepID) return null;
-                  
-                  return (
-                    <div key={i} style={{ display: 'flex', gap: '16px', borderLeft: isFirst ? '2px solid #f59e0b' : '2px solid var(--border-color)', paddingLeft: '16px', marginLeft: '8px' }}>
-                       <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                             <div className={styles.avatar} style={{ width: 24, height: 24, fontSize: '0.6rem' }}>{actorName.substring(0,2).toUpperCase()}</div>
-                             <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{actorName}</strong>
-                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                {item.Date ? new Date(parseInt(item.Date.match(/\d+/)[0], 10)).toLocaleString('pt-BR') : 'Data desconhecida'} 
-                             </span>
-                          </div>
-                          
-                          {/* Modificações Sistêmicas Misto no Chat */}
-                          {item.NewOwnerName && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', fontStyle: 'italic' }}>
-                                 → Transferiu a responsabilidade para <strong>{item.NewOwnerName}</strong>
-                              </div>
-                          )}
-
-                          {item.TaskItemComment && (
-                            <div 
-                               className={styles.commentText}
-                               style={{ 
-                                 background: isFirst ? 'var(--bg-main)' : 'transparent', 
-                                 padding: isFirst ? '16px' : '0', 
-                                 borderRadius: '8px' 
-                               }}
-                               dangerouslySetInnerHTML={{ __html: rewriteTaskrowImages(item.TaskItemComment) }} 
-                            />
-                          )}
-
-                           {/* Anexos que vieram soltos neste comentário em específico */}
-                           {item.Attachments?.length > 0 && (
-                              <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                {item.Attachments.map((subA: any, sx: number) => {
-                                   const isImg = subA.MimeType?.startsWith('image/');
-                                   const iUrl = `/api/taskrow/image?identification=${encodeURIComponent(subA.Identification)}&mimeType=${encodeURIComponent(subA.MimeType || 'image/png')}`;
-                                   const dUrl = `/api/taskrow/image?identification=${encodeURIComponent(subA.Identification)}&mimeType=${encodeURIComponent(subA.MimeType || 'image/png')}&download=1`;
-                                   
-                                   return (
-                                     <div key={sx} className={styles.chatAttachment}>
-                                        {isImg && (
-                                           <div className={styles.chatImageWrapper}>
-                                              <img src={iUrl} alt={subA.Name} />
-                                           </div>
-                                        )}
-                                        <a href={dUrl} target="_blank" rel="noopener noreferrer" className={styles.chatAttachmentLink}>
-                                           📎 {subA.Name || `Anexo #${sx}`}
-                                        </a>
-                                     </div>
-                                   );
-                                })}
-                              </div>
-                           )}
-                       </div>
-                    </div>
-                  );
-               }).reverse() : (
-                  <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Nenhum comentário ou atualização registrado.</p>
-               )}
-            </div>
+            <TaskHistory items={task.details?.NewTaskItems || []} taskOwner={task.owner} />
           </div>
         </div>
 

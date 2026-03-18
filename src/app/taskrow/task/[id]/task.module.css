@@ -350,6 +350,197 @@
   text-decoration: underline;
 }
 
+/* Historico Toggle */
+.historyToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.historyToggleBtn:hover {
+  background: var(--bg-main);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.historyPreviewBadge {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-primary);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Observation Section Styles */
+.observationTextarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.observationTextarea:focus {
+  outline: none;
+  border-color: var(--accent-main);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: var(--bg-main);
+  border-color: var(--text-secondary);
+}
+
+.actionButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.aiButton {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+  color: white;
+  border: none;
+}
+
+.aiButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+}
+
+.aiSummaryResult {
+  margin-top: 12px;
+  padding: 16px 20px;
+  background: rgba(168, 85, 247, 0.05);
+  border-left: 3px solid #a855f7;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Summary */
+.aiSummaryResult::-webkit-scrollbar {
+  width: 6px;
+}
+.aiSummaryResult::-webkit-scrollbar-track {
+  background: transparent;
+}
+.aiSummaryResult::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+}
+.aiSummaryResult::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.6);
+}
+
+/* Estilos internos do markdown renderizado */
+.aiSummaryResult p {
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+}
+
+.aiSummaryResult h1,
+.aiSummaryResult h2,
+.aiSummaryResult h3,
+.aiSummaryResult h4 {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin: 16px 0 8px 0;
+  font-size: 0.95rem;
+}
+
+.aiSummaryResult h1:first-child,
+.aiSummaryResult h2:first-child,
+.aiSummaryResult h3:first-child,
+.aiSummaryResult h4:first-child {
+  margin-top: 0;
+}
+
+.aiSummaryResult ul,
+.aiSummaryResult ol {
+  color: var(--text-primary);
+  margin: 6px 0 10px 0;
+  padding-left: 20px;
+}
+
+.aiSummaryResult li {
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.aiSummaryResult strong,
+.aiSummaryResult b {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.aiSummaryResult blockquote {
+  border-left: 3px solid rgba(168, 85, 247, 0.4);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.aiSummaryResult code {
+  background: rgba(168, 85, 247, 0.1);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+  color: #c084fc;
+}
+
+.aiSummaryResult p:last-child,
+.aiSummaryResult ul:last-child,
+.aiSummaryResult ol:last-child {
+  margin-bottom: 0;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Time Tracker e Estimativa */
 .timeTrackerCard {
   background-color: var(--bg-surface);
