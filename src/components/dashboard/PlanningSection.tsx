@@ -13,10 +13,12 @@ import {
   Trash2,
   Calendar,
   Clock,
-  MoreVertical
+  MoreVertical,
+  TrendingUp,
+  ChevronDown
 } from 'lucide-react';
 import { useDashboardStore, PlanningItem } from '../../hooks/dashboard/useDashboardStore';
-import styles from './dashboard-sections.module.css';
+import styles from './dashboard-premium.module.css';
 
 const CAT_ICONS: Record<string, any> = {
   'IA & Chatbot': Bot,
@@ -32,7 +34,7 @@ export function PlanningSection() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCat, setFilterCat] = useState('');
 
-  if (!isLoaded) return <div>Carregando planejamento...</div>;
+  if (!isLoaded) return <div>Carregando planejamento estratégico...</div>;
 
   const filtered = planning.filter(m => 
     (!filterStatus || m.status === filterStatus) && 
@@ -52,8 +54,8 @@ export function PlanningSection() {
       id: Date.now(),
       cat: 'IA & Chatbot',
       pri: 'Prioridade Alta',
-      title: 'Nova Melhoria',
-      desc: 'Descrição da melhoria...',
+      title: 'Nova Iniciativa Estratégica',
+      desc: 'Descreva aqui o impacto desta melhoria nos processos ou produtos...',
       dur: '1 mês',
       tri: 'Q2 2026',
       status: 'Backlog'
@@ -62,81 +64,105 @@ export function PlanningSection() {
   };
 
   return (
-    <div className={styles.sectionContainer}>
-      <header style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>
-          <span style={{ color: 'var(--status-warning)' }}>📈 Planejamento</span> Tech
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Melhorias e iniciativas estratégicas da área de tecnologia
-        </p>
+    <div className={styles.premiumContainer}>
+      <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <TrendingUp size={20} color="var(--status-warning)" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Roadmap Estratégico</span>
+          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Iniciativas de <span style={{ color: 'var(--status-warning)' }}>Expansão Tech</span></h2>
+        </div>
+        <button 
+          className={styles.premiumButton} 
+          onClick={handleNew} 
+          style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)' }}
+        >
+          <Plus size={18} strokeWidth={3} /> NOVA MELHORIA
+        </button>
       </header>
 
-      <section className={styles.statsRow}>
+      {/* Stats Dashboard */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '40px' }}>
         {Object.entries(stats).map(([k, v]) => (
-          <div key={k} className={styles.statCard}>
-            <span className={styles.statNum}>{v}</span>
-            <span className={styles.statLabel}>{k}</span>
+          <div key={k} className={styles.glassCard} style={{ padding: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.03)' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)' }}>{v}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>{k}</div>
           </div>
         ))}
       </section>
 
-      <div className={styles.filterBar}>
-        <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-          <select className={styles.input} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">Todos os Status</option>
-            <option>Backlog</option>
-            <option>Planejado</option>
-            <option>Em Andamento</option>
-            <option>Concluído</option>
-          </select>
-          <select className={styles.input} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
-            <option value="">Todas as Categorias</option>
-            <option>IA & Chatbot</option>
-            <option>Automação</option>
-            <option>Treinamento</option>
-            <option>DevOps</option>
-            <option>Processos</option>
-            <option>Infraestrutura</option>
-          </select>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', alignItems: 'center' }}>
+        <div style={{ padding: '8px', background: 'var(--bg-surface)', borderRadius: '8px', color: 'var(--text-secondary)' }}>
+           <Filter size={16} />
         </div>
-        <button className={`${styles.button} ${styles.primaryButton}`} onClick={handleNew} style={{ background: 'var(--status-warning)' }}>
-          <Plus size={16} /> Nova Melhoria
-        </button>
+        <div className={styles.glassCard} style={{ display: 'flex', gap: '2px', background: 'var(--bg-main)', padding: '2px' }}>
+          {['', 'Backlog', 'Planejado', 'Em Andamento', 'Concluído'].map(s => (
+            <button 
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: filterStatus === s ? 'var(--bg-surface-hover)' : 'transparent',
+                color: filterStatus === s ? 'var(--text-primary)' : 'var(--text-secondary)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {s || 'TODOS'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className={styles.grid}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
         {filtered.map(item => {
           const Icon = CAT_ICONS[item.cat] || Settings;
           return (
-            <div key={item.id} className={styles.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <span className={`${styles.badge} ${getCatClass(item.cat)}`}>{item.cat}</span>
-                  <span className={`${styles.badge} ${getPriClass(item.pri)}`}>{item.pri}</span>
+            <div key={item.id} className={styles.glassCard} style={{ padding: '24px', position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <span className={`${styles.statusBadge} ${getCatStyle(item.cat)}`}>{item.cat}</span>
+                  <span className={`${styles.statusBadge} ${getPriStyle(item.pri)}`}>{item.pri}</span>
                 </div>
-                <button className={styles.deleteBtn} onClick={() => deletePlanningItem(item.id)}>
+                <button className={styles.iconBtn} onClick={() => deletePlanningItem(item.id)} style={{ opacity: 0.3 }}>
                    <Trash2 size={14} />
                 </button>
               </div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '8px' }}>{item.title}</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.6 }}>
+              
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', lineHeight: 1.3 }}>{item.title}</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6, minHeight: '48px' }}>
                 {item.desc}
               </p>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  <Clock size={12} /> {item.dur}
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Duração Est.</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Clock size={12} color="var(--status-warning)" /> {item.dur}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  <Calendar size={12} /> {item.tri}
+                <div style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Previsão</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={12} color="var(--status-warning)" /> {item.tri}
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
-                <span className={`${styles.statusBadge} ${getStatusClass(item.status)}`}>{item.status}</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                   {/* Simplified Actions for brevity */}
-                   <button className={styles.iconBtn}><MoreVertical size={14} /></button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(item.status) }}></div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: getStatusColor(item.status) }}>{item.status}</span>
                 </div>
+                <button className={styles.iconBtn} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '6px' }}>
+                   <MoreVertical size={16} />
+                </button>
               </div>
             </div>
           );
@@ -144,49 +170,42 @@ export function PlanningSection() {
       </div>
 
       <style jsx>{`
-        .statsRow { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-        .statCard { flex: 1; min-width: 120px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; align-items: center; }
-        .statNum { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
-        .statLabel { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
-        .filterBar { display: flex; gap: 12px; margin-bottom: 24px; align-items: center; }
-        .statusBadge { padding: 4px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; }
-        .iconBtn { padding: 4px; color: var(--text-secondary); opacity: 0.6; }
-        .iconBtn:hover { opacity: 1; }
-        .deleteBtn { color: var(--text-secondary); opacity: 0.6; }
-        .deleteBtn:hover { opacity: 1; color: var(--status-error); }
+        .iconBtn { background: transparent; border: none; cursor: pointer; transition: all 0.2s; color: var(--text-secondary); }
+        .iconBtn:hover { transform: scale(1.1); color: var(--text-primary); }
+        .statusBadge { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; fontWeight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
       `}</style>
     </div>
   );
 }
 
-// Helpers for dynamic classes
-function getCatClass(v: string) {
+// Visual Helpers
+function getCatStyle(v: string) {
   const map: Record<string, string> = {
-    'IA & Chatbot': 'bg-indigo-500/10 text-indigo-400',
-    'Automação': 'bg-emerald-500/10 text-emerald-400',
-    'Treinamento': 'bg-amber-500/10 text-amber-400',
-    'DevOps': 'bg-sky-500/10 text-sky-400',
-    'Processos': 'bg-purple-500/10 text-purple-400',
-    'Infraestrutura': 'bg-cyan-500/10 text-cyan-400'
+    'IA & Chatbot': 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+    'Automação': 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    'Treinamento': 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    'DevOps': 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+    'Processos': 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+    'Infraestrutura': 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+  };
+  return map[v] || 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
+}
+
+function getPriStyle(v: string) {
+  const map: Record<string, string> = {
+    'Prioridade Alta': 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    'Prioridade Média': 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+    'Prioridade Baixa': 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
   };
   return map[v] || 'bg-gray-500/10 text-gray-400';
 }
 
-function getPriClass(v: string) {
+function getStatusColor(v: string) {
   const map: Record<string, string> = {
-    'Prioridade Alta': 'bg-rose-500/10 text-rose-400',
-    'Prioridade Média': 'bg-orange-500/10 text-orange-400',
-    'Prioridade Baixa': 'bg-emerald-500/10 text-emerald-400'
+    'Backlog': 'var(--text-secondary)',
+    'Planejado': '#38bdf8',
+    'Em Andamento': '#fbbf24',
+    'Concluído': '#10b981'
   };
-  return map[v] || 'bg-gray-500/10 text-gray-400';
-}
-
-function getStatusClass(v: string) {
-  const map: Record<string, string> = {
-    'Backlog': 'bg-sky-500/10 text-sky-400',
-    'Planejado': 'bg-amber-500/10 text-amber-400',
-    'Em Andamento': 'bg-orange-500/10 text-orange-400',
-    'Concluído': 'bg-emerald-500/10 text-emerald-400'
-  };
-  return map[v] || 'bg-gray-500/10 text-gray-400';
+  return map[v] || 'var(--text-secondary)';
 }

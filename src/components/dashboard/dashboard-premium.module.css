@@ -1,0 +1,184 @@
+/* Premium Dashboard Theme - Agency Grade */
+
+:root {
+  --premium-purple: #7c3aed;
+  --premium-purple-hover: #8b5cf6;
+  --premium-glow: rgba(124, 58, 237, 0.4);
+  --glass-bg: rgba(24, 24, 27, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+.premiumContainer {
+  animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Glass Card Style */
+.glassCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+.glassCard:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Sidebar Refinement */
+.sidebar {
+  background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-main) 100%);
+  border-right: 1px solid var(--border-color);
+  padding: 24px 12px;
+}
+
+.clientItem {
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+}
+
+.activeClient {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.2);
+  color: var(--text-primary);
+}
+
+/* Sophisticated Inputs */
+.premiumInput {
+  background: var(--bg-main) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  padding: 10px 16px !important;
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.premiumInput:focus {
+  border-color: var(--premium-purple) !important;
+  box-shadow: 0 0 0 3px var(--premium-glow) !important;
+  outline: none;
+}
+
+/* Buttons */
+.premiumButton {
+  background: linear-gradient(135deg, var(--premium-purple), #4f46e5);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  transition: all 0.3s ease;
+}
+
+.premiumButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+}
+
+/* QC Specific */
+.qcGrid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.topicHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(39, 39, 42, 0.5);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.topicHeader:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-secondary);
+}
+
+.adjItem {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 20px;
+}
+
+.adjItem:last-child {
+  border-bottom: none;
+}
+
+.progressContainer {
+  height: 8px;
+  background: var(--bg-main);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--premium-purple), var(--accent-secondary));
+  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.userRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.tabItem {
+  color: var(--text-secondary);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.activeTab {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface-hover);
+  border-color: var(--border-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}

@@ -368,3 +368,148 @@
   background-color: rgba(239, 68, 68, 0.12);
   color: var(--status-error);
 }
+/* Sprint Tab Styles */
+.tabSwitcher {
+  display: flex;
+  gap: 8px;
+  background-color: var(--bg-surface);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+}
+
+.tabBtn {
+  padding: 8px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.activeTabBtn {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid var(--border-color);
+}
+
+.sprintBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-bottom: 40px;
+}
+
+.clientGroup {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.groupHeader {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.clientInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clientBadge {
+  background-color: var(--accent-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.clientName {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.sprintTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sprintTable th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sprintTable td {
+  padding: 14px 24px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.2s ease;
+}
+
+.sprintTable tr:hover td {
+  background: rgba(255,255,255,0.01);
+}
+
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.status_todo { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+.status_inProgress { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.status_inReview { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.status_done { background: rgba(16, 185, 129, 0.1); color: #10b881; }
+
+.assigneeCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.summaryRow {
+  padding: 12px 24px;
+  background: rgba(255,255,255,0.01);
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.totalLabel {
+  color: var(--text-primary);
+  margin-left: 8px;
+}

@@ -10,10 +10,12 @@ import {
   TrendingUp,
   RefreshCw,
   Clock,
-  Zap
+  Zap,
+  Info,
+  Calendar
 } from 'lucide-react';
 import { fetchClickUpData } from '../../app/dashboard/actions';
-import styles from './dashboard-sections.module.css';
+import styles from './dashboard-premium.module.css';
 
 const CLIENT_LIMITS: Record<string, any> = {
   'AL': { name: 'Alares', color: '#6366f1', limit: 300 },
@@ -33,29 +35,24 @@ export function HoursSection() {
   const [month, setMonth] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [data, setData] = useState<Record<string, any>>({});
-  const [alerts, setAlerts] = useState<string[]>([]);
   
   useEffect(() => {
-    // Load config from localStorage
     setToken(localStorage.getItem('cu-token') || '');
     setWorkspace(localStorage.getItem('cu-ws') || '');
     const now = new Date();
-    setMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    setMonth(currentMonth);
     
-    // Load cached data
-    const cached = localStorage.getItem(`dash-data-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+    const cached = localStorage.getItem(`dash-data-${currentMonth}`);
     if (cached) setData(JSON.parse(cached));
   }, []);
 
   const handleSync = async () => {
     if (!token || !workspace) {
-      alert('Por favor, configure o Token e Workspace ID primeiro.');
+      alert('Configuração de Token ou Workspace pendente.');
       return;
     }
-    
     setIsSyncing(true);
-    setAlerts([]);
-    
     const [y, m] = month.split('-');
     const start = new Date(parseInt(y), parseInt(m)-1, 1).getTime();
     const end = new Date(parseInt(y), parseInt(m), 0, 23, 59, 59, 999).getTime();
@@ -65,22 +62,18 @@ export function HoursSection() {
       const result = await fetchClickUpData(endpoint, token);
       
       if (result.error) {
-        alert(`Erro: ${result.error}\n${result.detail || ''}`);
-        setIsSyncing(false);
+        alert(`Erro ClickUp: ${result.error}`);
         return;
       }
       
-      // Process data (simplified version of HTML logic)
       const processed: Record<string, any> = {};
       Object.keys(CLIENT_LIMITS).forEach(k => {
-        processed[k] = { ...CLIENT_LIMITS[k], ms: 0, tasks: [] };
+        processed[k] = { ...CLIENT_LIMITS[k], ms: 0 };
       });
       
       result.data.forEach((entry: any) => {
         const dur = parseInt(entry.duration) || 0;
         const listName = entry.task?.list?.name?.toLowerCase() || '';
-        
-        // Auto-detect client by name
         Object.keys(CLIENT_LIMITS).forEach(cid => {
           if (listName.includes(CLIENT_LIMITS[cid].name.toLowerCase())) {
             processed[cid].ms += dur;
@@ -91,7 +84,7 @@ export function HoursSection() {
       setData(processed);
       localStorage.setItem(`dash-data-${month}`, JSON.stringify(processed));
     } catch (e) {
-      alert('Falha na sincronização.');
+      alert('Falha na comunicação com ClickUp.');
     } finally {
       setIsSyncing(false);
     }
@@ -100,60 +93,84 @@ export function HoursSection() {
   const msToH = (ms: number) => Math.round(ms / 3600000 * 10) / 10;
 
   return (
-    <div className={styles.sectionContainer}>
-      <header className={styles.dashHeader}>
+    <div className={styles.premiumContainer}>
+      <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>
-            <span style={{ color: 'var(--accent-secondary)' }}>⏱ Dashboard</span> de Horas
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Consumo mensal de horas por cliente (ClickUp)</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Clock size={18} color="var(--accent-secondary)" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Monitoramento de Horas</span>
+          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Consumo de <span style={{ color: 'var(--accent-secondary)' }}>Verba Mensal</span></h2>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-           <input type="month" className={styles.input} value={month} onChange={e => setMonth(e.target.value)} />
-           <button className={`${styles.button} ${styles.primaryButton}`} style={{ background: 'var(--accent-secondary)' }} onClick={handleSync} disabled={isSyncing}>
-              {isSyncing ? <RefreshCw size={16} className={styles.spin} /> : <Zap size={16} />}
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+           <div className={styles.glassCard} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: '12px' }}>
+             <Calendar size={16} color="var(--text-secondary)" />
+             <input type="month" className={styles.premiumInput} style={{ border: 'none !important', padding: '0 !important', background: 'transparent !important', width: 'auto' }} value={month} onChange={e => setMonth(e.target.value)} />
+           </div>
+           <button 
+             className={styles.premiumButton} 
+             style={{ background: 'linear-gradient(135deg, var(--accent-secondary), #0ea5e9)', boxShadow: '0 4px 15px rgba(67, 182, 178, 0.3)' }} 
+             onClick={handleSync} 
+             disabled={isSyncing}
+           >
+              {isSyncing ? <RefreshCw size={18} className={styles.spin} /> : <Zap size={18} />}
+              {isSyncing ? 'ATUALIZANDO...' : 'SINCRONIZAR CLICKUP'}
            </button>
         </div>
       </header>
 
-      <div className={styles.configBar}>
-         <div className={styles.field}>
-            <label>API Token</label>
-            <input type="password" className={styles.input} value={token} onChange={e => { setToken(e.target.value); localStorage.setItem('cu-token', e.target.value); }} placeholder="pk_..." />
+      {/* Config Bar */}
+      <section className={styles.glassCard} style={{ padding: '20px', marginBottom: '40px', display: 'flex', gap: '24px', alignItems: 'center' }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>ClickUp Token</label>
+            <input type="password" className={styles.premiumInput} style={{ flex: 1 }} value={token} onChange={e => { setToken(e.target.value); localStorage.setItem('cu-token', e.target.value); }} />
          </div>
-         <div className={styles.field}>
-            <label>Workspace ID</label>
-            <input className={styles.input} value={workspace} onChange={e => { setWorkspace(e.target.value); localStorage.setItem('cu-ws', e.target.value); }} placeholder="1234567" />
+         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '240px' }}>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Team ID</label>
+            <input className={styles.premiumInput} style={{ flex: 1 }} value={workspace} onChange={e => { setWorkspace(e.target.value); localStorage.setItem('cu-ws', e.target.value); }} />
          </div>
-      </div>
+         <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}>
+           <Info size={16} />
+         </div>
+      </section>
 
-      <div className={styles.grid}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
         {Object.values(data).filter(c => c.limit).map(c => {
           const h = msToH(c.ms);
           const pct = Math.min(Math.round((h / c.limit) * 100), 100);
           const isOver = h > c.limit;
           const isWarn = !isOver && (h / c.limit) >= 0.8;
-          const statusClass = isOver ? styles.over : isWarn ? styles.warn : styles.ok;
+          const statusColor = isOver ? 'var(--status-error)' : isWarn ? 'var(--status-warning)' : 'var(--status-success)';
           
           return (
-            <div key={c.name} className={`${styles.card} ${styles.dashCard}`}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</span>
-                 <span className={`${styles.statusBadge} ${statusClass}`}>{isOver ? 'Excedido' : isWarn ? 'Atenção' : 'OK'}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }}>
-                 <span style={{ fontSize: '2rem', fontWeight: 800 }}>{h}h</span>
-                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>/ {c.limit}h</span>
-              </div>
-              <div className={styles.progressBar}>
-                 <div className={`${styles.progressFill} ${statusClass}`} style={{ width: `${pct}%` }}></div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600 }}>
-                 <span style={{ color: isOver ? 'var(--status-error)' : isWarn ? 'var(--status-warning)' : 'var(--status-success)' }}>
-                   {isOver ? `+${Math.abs(c.limit - h).toFixed(1)}h excedido` : `${(c.limit - h).toFixed(1)}h restantes`}
+            <div key={c.name} className={styles.glassCard} style={{ padding: '24px', borderTop: `4px solid ${statusColor}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor, boxShadow: `0 0 10px ${statusColor}` }}></div>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{c.name}</span>
+                 </div>
+                 <span style={{ fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', color: statusColor, letterSpacing: '0.05em' }}>
+                   {isOver ? 'ESGOTADO' : isWarn ? 'CRÍTICO' : 'ESTÁVEL'}
                  </span>
-                 <span style={{ color: 'var(--text-secondary)' }}>{pct}%</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '20px' }}>
+                 <span style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{h}</span>
+                 <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>/ {c.limit}h</span>
+              </div>
+
+              <div className={styles.progressContainer}>
+                 <div className={styles.progressFill} style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${statusColor}, ${statusColor}99)` }}></div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                   {isOver ? <AlertTriangle size={14} color="var(--status-error)" /> : <Info size={14} color="var(--text-secondary)" />}
+                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isOver ? 'var(--status-error)' : 'var(--text-secondary)' }}>
+                     {isOver ? `${Math.abs(c.limit - h).toFixed(1)}h em excesso` : `${(c.limit - h).toFixed(1)}h disponíveis`}
+                   </span>
+                 </div>
+                 <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>{pct}%</span>
               </div>
             </div>
           );
@@ -161,26 +178,21 @@ export function HoursSection() {
       </div>
 
       {!Object.keys(data).length && (
-         <div style={{ padding: '48px', textAlign: 'center', background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-            Clique em <strong>Sincronizar</strong> para carregar os dados do ClickUp para o mês selecionado.
+         <div className={styles.glassCard} style={{ padding: '64px', textAlign: 'center' }}>
+            <Zap size={32} color="var(--accent-secondary)" style={{ marginBottom: '16px', opacity: 0.5 }} />
+            <p style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Os dados de consumo não foram carregados para este período.</p>
+            <button className={styles.textBtn} onClick={handleSync} style={{ marginTop: '12px', color: 'var(--accent-secondary)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.7rem' }}>SINCRONIZAR AGORA</button>
          </div>
       )}
 
       <style jsx>{`
-        .dashHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-        .configBar { display: flex; gap: 16px; background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); margin-bottom: 32px; border: 1px solid var(--border-color); }
-        .field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .field label { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; }
-        .dashCard { position: relative; overflow: hidden; border-top: 3px solid transparent; }
-        .ok { background: var(--status-success) !important; color: white !important; }
-        .warn { background: var(--status-warning) !important; color: black !important; }
-        .over { background: var(--status-error) !important; color: white !important; }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .progressBar { height: 6px; background: var(--bg-surface-hover); border-radius: 3px; overflow: hidden; }
-        .progressFill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
-        .statusBadge { padding: 3px 8px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; }
       `}</style>
     </div>
   );
+}
+
+function activeClientColor(base: string) {
+  return base === 'var(--status-success)' ? '#34d399' : base === 'var(--status-warning)' ? '#fbbf24' : '#f87171';
 }

@@ -38,6 +38,13 @@ export interface PlanningItem {
   status: string;
 }
 
+export interface Absence {
+  id: string;
+  start: string;
+  end: string;
+  type: string;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export interface TeamMember {
   status: string;
   turno: string;
   cls: string;
+  absences: Absence[];
 }
 
 export interface Period {
@@ -112,7 +120,7 @@ export function useDashboardStore() {
     const savedPeriods = localStorage.getItem(STORAGE_KEYS.PERIODS);
 
     // QC Clients mapping with default if not all exist
-    let finalClients = savedClients ? JSON.parse(savedClients) : [];
+    let finalClients = savedClients ? JSON.parse(savedClients).filter((c: any) => c !== null && c !== undefined) : [];
     if (finalClients.length === 0) {
         finalClients = DEFAULT_CLIENTS;
     } else {
@@ -126,7 +134,11 @@ export function useDashboardStore() {
 
     setClients(finalClients);
     setPlanning(savedPlanning ? JSON.parse(savedPlanning) : DEFAULT_PLANNING);
-    setTeam(savedTeam ? JSON.parse(savedTeam) : []);
+    
+    // Team loading with absences safeguard
+    const rawTeam = savedTeam ? JSON.parse(savedTeam) : [];
+    setTeam(rawTeam.map((m: any) => ({ ...m, absences: m.absences || [] })));
+    
     setPeriods(savedPeriods ? JSON.parse(savedPeriods) : []);
     setIsLoaded(true);
   }, []);

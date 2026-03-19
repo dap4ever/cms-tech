@@ -4,26 +4,27 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
-  KanbanSquare, 
-  GitPullRequest, 
+  CheckCircle2,
+  TrendingUp,
   Users, 
   FileText, 
-  BarChart2, 
+  Inbox,
+  Shield,
   Settings,
-  Inbox
+  GitPullRequest
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
+  { name: 'Quality Check', route: '/quality-check', icon: CheckCircle2 },
+  { name: 'Planejamento', route: '/planning', icon: TrendingUp },
+  { name: 'Projetos', route: '/projects', icon: GitPullRequest },
+  { name: 'Relatórios', route: '/reports', icon: FileText },
+  { name: 'Equipe', route: '/teams', icon: Users },
+  { name: 'Usuários', route: '/dashboard/users', icon: Shield },
   { name: 'Caixa de Entrada', route: '/taskrow', icon: Inbox },
-  { name: 'Projetos', route: '/projects', icon: KanbanSquare },
-  { name: 'Repositórios', route: '/repos', icon: GitPullRequest },
-  { name: 'Times', route: '/teams', icon: Users },
-  { name: 'Docs', route: '/docs', icon: FileText },
-  { name: 'Métricas', route: '/metrics', icon: BarChart2 },
-  { name: 'Config', route: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
@@ -40,6 +41,13 @@ export function Sidebar() {
       .substring(0, 2);
   };
 
+  const filteredNavItems = navItems.filter(item => {
+    if (item.name === 'Usuários') {
+      return user?.role === 'GESTOR' || user?.role === 'ADMINISTRADOR';
+    }
+    return true;
+  });
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logoContainer}>
@@ -55,7 +63,7 @@ export function Sidebar() {
       <div className={styles.navGroup}>
         <span className={styles.navTitle}>Menu Principal</span>
         <ul className={styles.navList}>
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.route);
             return (
