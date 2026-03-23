@@ -192,10 +192,16 @@
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
   border-color: var(--accent-primary);
+  cursor: pointer;
 }
 
 .taskCard:active {
   cursor: grabbing;
+}
+
+.sprintTable tr:hover td {
+  background: rgba(255,255,255,0.01);
+  cursor: pointer;
 }
 
 /* Estado de arraste */
@@ -512,4 +518,18 @@
 .totalLabel {
   color: var(--text-primary);
   margin-left: 8px;
+}
+
+.textBtn { 
+  background: transparent; 
+  border: none; 
+  cursor: pointer; 
+}
+
+.iconBtn { 
+  background: transparent; 
+  border: none; 
+  cursor: pointer; 
+  color: var(--text-secondary); 
+  opacity: 0.6; 
 }

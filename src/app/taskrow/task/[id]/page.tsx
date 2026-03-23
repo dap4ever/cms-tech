@@ -63,22 +63,29 @@ async function getTaskData(taskId: string) {
   if (!payload.success) throw new Error(payload.error || 'Tarefa não encontrada');
   
   const rootTask = payload.summary;
-  const taskData = rootTask;
+  // payload.summary é um KanbanTask: { id, title, column, rawData, assignee, client, ... }
+  // Os campos detalhados do Taskrow estão dentro de rawData
+  const raw = rootTask?.rawData || {};
   
   return {
-    id: `TR-${taskData.taskID || taskData.TaskID}` !== 'TR-undefined' ? `TR-${taskData.taskID || taskData.TaskID}` : taskId,
-    title: taskData.taskTitle || taskData.title || 'Sem título',
-    status: taskData.pipelineStep || 'A Fazer',
-    priority: taskData.priority || taskData.Priority || 'Normal',
-    client: taskData.clientNickname || 'Geral',
-    owner: taskData.ownerUserLogin ? taskData.ownerUserLogin : 'Não Alocado',
-    creationUser: taskData.creationUserLogin || 'Usuário',
-    job: taskData.jobDisplayTitle || taskData.jobNumber || 'N/A',
+    id: rootTask?.id || taskId,
+    title: raw.taskTitle || raw.title || rootTask?.title || 'Sem título',
+    status: raw.pipelineStep || rootTask?.statusOriginal || 'A Fazer',
+    priority: raw.priority || raw.Priority || rootTask?.priority || 'Normal',
+    client: raw.clientDisplayName || raw.clientNickName || rootTask?.client || 'Geral',
+    owner: raw.ownerUserLogin || rootTask?.assignee || 'Não Alocado',
+    creationUser: raw.creationUserLogin || 'Usuário',
+    job: `#${raw.jobNumber || 'N/A'} ${raw.jobTitle || raw.jobDisplayTitle || ''}`.trim(),
     hoursTracked: Math.floor(Math.random() * 20), 
     hoursEstimated: Math.floor(Math.random() * 40) + 10,
-    createdDate: taskData.creationDate || taskData.created_at || 'Data desconhecida',
-    dueDate: taskData.dueDate || taskData.due_date || 'Nenhuma',
+    createdDate: raw.creationDate || raw.created_at || 'Data desconhecida',
+    dueDate: raw.dueDate || raw.due_date || rootTask?.dueDate || 'Nenhuma',
     details: payload.details?.TaskData || null,
+    
+    // Dados de fallback do rawData
+    briefing: raw.taskItemComment || raw.TaskItemComment || raw.taskDescription || null,
+    rawAttachments: raw.attachments || raw.Attachments || raw.TaskAttachments || [],
+    detailError: payload.detailError || null,
   };
 }
 
@@ -132,29 +139,39 @@ export default async function TaskDetail(props: {
           <ObservationSection taskId={task.id} historyItems={task.details?.NewTaskItems || []} />
 
           {/* Anexos Principais (Galeria) */}
-          {task.details?.TaskAttachments?.length > 0 && (
+          {/* Anexos Principais (Galeria do RawData ou TaskDetail) */}
+          {(task.details?.TaskAttachments?.length > 0 || task.rawAttachments?.length > 0) && (
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Anexos da Tarefa</h2>
               <div className={styles.gallery}>
-                 {task.details.TaskAttachments.map((att: any, idx: number) => {
-                    const isImage = att.MimeType?.startsWith('image/');
-                    const imageUrl = `/api/taskrow/image?identification=${encodeURIComponent(att.Identification)}&mimeType=${encodeURIComponent(att.MimeType || 'image/png')}`;
-                    const downloadUrl = `/api/taskrow/image?identification=${encodeURIComponent(att.Identification)}&mimeType=${encodeURIComponent(att.MimeType || 'image/png')}&download=1`;
+                 {(task.details?.TaskAttachments || task.rawAttachments || []).map((att: any, idx: number) => {
+                    const mime = att.MimeType || att.mimeType || att.mime_type || 'image/png';
+                    const name = att.Name || att.name || `Anexo_${idx}`;
+                    const ident = att.Identification || att.identification;
+                    const isImage = mime.startsWith('image/');
+                    
+                    // Se for direto do WP Media (url S3/local disponível)
+                    const directUrl = att.url || att.Url;
+                    
+                    // Se precisar passar pelo proxy do Taskrow via guid
+                    const proxyUrl = `/api/taskrow/image?identification=${encodeURIComponent(ident || '')}&mimeType=${encodeURIComponent(mime)}`;
+                    const imageUrl = directUrl || proxyUrl;
+                    const downloadUrl = directUrl || `${proxyUrl}&download=1`;
 
                     return (
                       <div key={idx} className={styles.attachmentItem}>
                          {isImage ? (
                            <a href={imageUrl} target="_blank" rel="noopener noreferrer" className={styles.imagePreview}>
-                              <img src={imageUrl} alt={att.Name} />
+                              <img src={imageUrl} alt={name} />
                            </a>
                          ) : (
                            <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className={styles.fileIcon}>📄</a>
                          )}
                          <div className={styles.attachmentMeta}>
                             <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className={styles.attachmentName}>
-                               {att.Name || `Anexo_${idx}`}
+                               {name}
                             </a>
-                            <span className={styles.attachmentSize}>{att.SizeInKB ? `${att.SizeInKB} KB` : ''}</span>
+                            <span className={styles.attachmentSize}>{att.SizeInKB || att.size_in_kb ? `${att.SizeInKB || att.size_in_kb} KB` : ''}</span>
                          </div>
                       </div>
                     );
@@ -163,10 +180,27 @@ export default async function TaskDetail(props: {
             </div>
           )}
 
-          {/* Chat Timeline (NewTaskItems) */}
+          {/* Chat Timeline (NewTaskItems ou Briefing de fallback) */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Histórico e Atualizações</h2>
-            <TaskHistory items={task.details?.NewTaskItems || []} taskOwner={task.owner} />
+            {task.detailError && (
+              <div style={{ backgroundColor: '#ffcccc', color: '#cc0000', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                <strong>Aviso de Integração:</strong> Não foi possível puxar o histórico completo. {task.detailError}
+              </div>
+            )}
+            
+            {task.details?.NewTaskItems?.length > 0 ? (
+               <TaskHistory items={task.details.NewTaskItems} taskOwner={task.owner} />
+            ) : task.briefing ? (
+               <TaskHistory items={[{
+                 TaskItemType: 'Briefing Inicial',
+                 TaskItemDate: task.createdDate,
+                 UserLogin: task.creationUser,
+                 TaskItemComment: task.briefing
+               }]} taskOwner={task.owner} />
+            ) : (
+               <p className={styles.emptyHistory}>Nenhum comentário ou atualização registrado.</p>
+            )}
           </div>
         </div>
 

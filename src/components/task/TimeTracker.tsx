@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Save, Timer } from 'lucide-react';
 import styles from '@/app/taskrow/task/[id]/task.module.css';
+import { useAuth } from '@/context/AuthContext';
 
 interface TimeTrackerProps {
   taskId: string;
@@ -16,6 +17,8 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
   const [estimation, setEstimation] = useState(initialHoursEstimated.toString());
   const [showSuccess, setShowSuccess] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const { isDev } = useAuth();
 
   // Carregar dados salvos
   useEffect(() => {
@@ -109,16 +112,18 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
           />
         </div>
 
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>Nova Estimativa (Horas)</label>
-          <input 
-            type="text" 
-            className={styles.trackerInput}
-            placeholder="Ex: 10"
-            value={estimation}
-            onChange={(e) => setEstimation(e.target.value)}
-          />
-        </div>
+        {!isDev && (
+          <div className={styles.inputGroup}>
+            <label className={styles.inputLabel}>Nova Estimativa (Horas)</label>
+            <input 
+              type="text" 
+              className={styles.trackerInput}
+              placeholder="Ex: 10"
+              value={estimation}
+              onChange={(e) => setEstimation(e.target.value)}
+            />
+          </div>
+        )}
 
         <button className={styles.saveBtn} onClick={handleSave}>
           <Save size={18} /> Salvar Progresso

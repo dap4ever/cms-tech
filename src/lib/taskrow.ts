@@ -24,6 +24,8 @@ export interface TaskrowRawTask {
   Attachments?: any[];
   TaskAttachments?: any[];
   jobNumber?: number;
+  taskNumber?: number;
+  TaskNumber?: number;
 }
 
 export interface KanbanTask {

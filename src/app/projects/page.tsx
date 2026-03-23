@@ -40,8 +40,49 @@ export default function InternalProjects() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, taskId: string | null }>({ x: 0, y: 0, taskId: null });
 
-  const isAdmin = user?.role === 'GESTOR' || user?.role === 'ADMINISTRADOR';
+  const isGestor = user?.role === 'GESTOR';
+  const isGerente = user?.role === 'ADMINISTRADOR';
+  const isDev = user?.role === 'DESENVOLVEDOR';
+  const isAdmin = isGestor || isGerente;
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu({ ...contextMenu, taskId: null });
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, taskId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, taskId });
+  };
+
+  const handleReturnToInbox = (taskId: string) => {
+    const updated = tasks.filter(t => t.id !== taskId);
+    setTasks(updated);
+    localStorage.setItem('f2f_internal_projects', JSON.stringify(updated));
+    setContextMenu({ ...contextMenu, taskId: null });
+  };
+
+  const handleTaskClick = (task: any) => {
+    const rawData = task.rawData || {};
+    
+    // O clientNickname correto vem do campo urlData do Taskrow
+    let parsedUrlData: any = {};
+    try {
+      if (rawData.urlData) parsedUrlData = JSON.parse(rawData.urlData);
+    } catch(e) {}
+    
+    const cNick = parsedUrlData.ClientNickName || rawData.clientNickName || rawData.clientNickname || task.client;
+    const jNum = parsedUrlData.JobNumber || rawData.jobNumber || rawData.JobNumber;
+    
+    let url = `/taskrow/task/${task.id}`;
+    if (cNick && jNum) {
+      url += `?client=${encodeURIComponent(cNick)}&job=${jNum}`;
+    }
+    window.location.href = url;
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('f2f_internal_projects');
@@ -133,7 +174,9 @@ export default function InternalProjects() {
 
         <div className={styles.headerActions}>
            <button className={styles.btnSecondary}><Filter size={16} /></button>
-           <button className={styles.btnPrimary}><Plus size={16} /> Nova Tarefa</button>
+           {isAdmin && (
+             <button className={styles.btnPrimary}><Plus size={16} /> Nova Tarefa</button>
+           )}
         </div>
       </header>
 
@@ -155,7 +198,14 @@ export default function InternalProjects() {
                   </div>
                   <div className={styles.columnContent}>
                     {columnTasks.map(task => (
-                      <div key={task.id} className={styles.taskCard} draggable onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <div
+                        key={task.id}
+                        className={styles.taskCard}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task.id)}
+                        onContextMenu={(e) => handleContextMenu(e, task.id)}
+                        onClick={() => handleTaskClick(task)}
+                      >
                         <div className={styles.taskHeader}>
                            <span className={styles.taskId}>{task.id}</span>
                            <div className={`${styles.taskPriority} ${task.priority === 'high' ? styles.priorityHigh : styles.priorityLow}`}></div>
@@ -186,7 +236,9 @@ export default function InternalProjects() {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '12px' }}>{clientTasks.length} tarefas</span>
                    </div>
                    <div style={{ display: 'flex', gap: '16px' }}>
-                      <button className={styles.textBtn} style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-primary)' }}>+ TAREFA</button>
+                      {isAdmin && (
+                        <button className={styles.textBtn} style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-primary)' }}>+ TAREFA</button>
+                      )}
                       <button className={styles.iconBtn}><MoreHorizontal size={18} /></button>
                    </div>
                 </div>
@@ -205,7 +257,11 @@ export default function InternalProjects() {
                    </thead>
                    <tbody>
                       {clientTasks.map((t: any) => (
-                        <tr key={t.id}>
+                        <tr 
+                          key={t.id} 
+                          onContextMenu={(e) => handleContextMenu(e, t.id)}
+                          onClick={() => handleTaskClick(t)}
+                        >
                            <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                  <CheckCircle2 size={16} color={t.column === 'done' ? 'var(--status-success)' : 'var(--text-secondary)'} />
@@ -238,12 +294,24 @@ export default function InternalProjects() {
             ))}
           </section>
         )}
-      </main>
 
-      <style jsx>{`
-        .textBtn { background: transparent; border: none; cursor: pointer; }
-        .iconBtn { background: transparent; border: none; cursor: pointer; color: var(--text-secondary); opacity: 0.6; }
-      `}</style>
+        {/* Context Menu UI */}
+        {contextMenu.taskId && (
+          <div
+            className={styles.contextMenu}
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className={styles.contextMenuItem}
+              onClick={() => handleReturnToInbox(contextMenu.taskId!)}
+            >
+              <Inbox size={14} style={{ marginRight: 8 }} />
+              Devolver para Caixa de Entrada
+            </button>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

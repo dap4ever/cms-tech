@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import styles from '../../app/taskrow/task/[id]/task.module.css';
+import { useAuth } from '@/context/AuthContext';
 
 interface TaskHistoryProps {
   items: any[];
@@ -24,6 +25,7 @@ function rewriteTaskrowImages(html: string): string {
 export function TaskHistory({ items, taskOwner }: TaskHistoryProps) {
   // Começa sempre colapsado
   const [isExpanded, setIsExpanded] = useState(false);
+  const { user, isAdmin } = useAuth();
 
   const validItems = items.filter(item => item.TaskItemComment || item.NewOwnerName || item.PipelineStepID);
   const reversedItems = [...validItems].reverse();
@@ -68,6 +70,15 @@ export function TaskHistory({ items, taskOwner }: TaskHistoryProps) {
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       {item.Date ? new Date(parseInt(item.Date.match(/\d+/)[0], 10)).toLocaleString('pt-BR') : 'Data desconhecida'}
                     </span>
+                    {(isAdmin || user?.name === actorName || user?.email?.split('@')[0] === actorName) && (
+                      <button 
+                        onClick={() => alert(`Mock: Excluindo comentário ID ${item.TaskItemID || 'desconhecido'}`)} 
+                        title="Excluir Comentário"
+                        style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
+                      >
+                         <Trash2 size={14} color="#ef4444" />
+                      </button>
+                    )}
                   </div>
 
                   {item.NewOwnerName && (

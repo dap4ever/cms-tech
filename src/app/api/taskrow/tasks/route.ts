@@ -31,6 +31,10 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const includeClosed = searchParams.get('includeClosed') === 'true';
+    const q = searchParams.get('q') || '';
+
     const baseUrl = `https://${host}`;
     const headers = {
       '__identifier': token,
@@ -65,10 +69,18 @@ export async function GET(request: Request) {
 
     while (hasMoreItems && requestsCount < MAX_PAGES) {
       requestsCount++;
-      const bodyPayload = {
-        Closed: false,
+      const bodyPayload: any = {
+        Closed: includeClosed ? null : false,
         Offset: currentOffset
       };
+
+      if (q) {
+        if (/^\d+$/.test(q)) {
+          bodyPayload.TaskNumber = parseInt(q);
+        } else {
+          bodyPayload.Term = q;
+        }
+      }
 
       const res = await fetch(`${baseUrl}/api/v2/search/tasks/advancedsearch`, {
         method: 'POST',
@@ -101,7 +113,7 @@ export async function GET(request: Request) {
     // 3. MAPEAR E SANITIZAR COMO KANBANTASK
     // Removemos os filtros rígidos "Tech" daqui (Isso é feito no FrontEnd agora pela Camada 2).
     const mappedTasks: KanbanTask[] = allRawTasks.map(task => {
-      const id = task.taskID || task.TaskID || Math.floor(Math.random() * 99999);
+      const id = task.taskNumber || task.TaskNumber || task.taskID || task.TaskID || Math.floor(Math.random() * 99999);
       const title = task.taskTitle || task.title || 'Sem título';
       
       // Tentando resolver Owner
