@@ -18,22 +18,29 @@ const columns = [
 
 import Link from 'next/link';
 import { applyTechHeuristicsClass } from '@/lib/taskrow';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Projects() {
+  const { user, isGestor, isAdmin } = useAuth();
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMSG, setErrorMSG] = useState<string | null>(null);
   const [approvedTasks, setApprovedTasks] = useState<Set<string>>(new Set());
+  
+  // Novos estados para atribuição
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [taskAssignments, setTaskAssignments] = useState<Record<string, string>>({});
+  const [selectedDevs, setSelectedDevs] = useState<Record<string, string>>({});
 
   // Estados dos Filtros (Camada 2)
-  const [showingFilters, setShowingFilters] = useState(true); // Na imagem os filtros estão visíveis
+  const [showingFilters, setShowingFilters] = useState(true); 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [filterProject, setFilterProject] = useState('');
 
 
   useEffect(() => {
-    // Carregar aprovadas do localStorage
+    // Carregar aprovadas do localStorage (fallback legado)
     const savedInternal = localStorage.getItem('f2f_internal_projects');
     if (savedInternal) {
        try {
@@ -43,32 +50,45 @@ export default function Projects() {
        } catch (e) {}
     }
 
-    async function fetchTasks() {
+    async function fetchData() {
       try {
-        const response = await fetch('/api/taskrow/tasks');
-        const data = await response.json();
+        // 1. Busca Tarefas do Taskrow
+        const tasksRes = await fetch('/api/taskrow/tasks');
+        const tasksData = await tasksRes.json();
         
-        if (data.success) {
-          setTasks(data.tasks);
-          
-          // Fallback preenchendo valor default de Owner caso não seja manipulado depois
-          if (data.tasks.some((t: KanbanTask) => t.assigneeLogin.includes('raissa'))) {
-             // O Doc diz tenta preselecionar a raissa
-             // setFilterOwner('raissa'); Removido auto preenchimento pesado para flexibilidade
-          }
-
+        if (tasksData.success) {
+          setTasks(tasksData.tasks);
         } else {
-          setErrorMSG(data.error || 'Erro desconhecido ao carregar tarefas');
+          setErrorMSG(tasksData.error || 'Erro ao carregar tarefas');
         }
+
+        // 2. Busca Usuários do sistema (apenas se for Gestor/Admin)
+        if (isAdmin || isGestor) {
+          const usersRes = await fetch('/api/users');
+          const usersData = await usersRes.json();
+          if (usersData.success) setAllUsers(usersData.users);
+        }
+
+        // 3. Busca Atribuições do Banco
+        const assignRes = await fetch('/api/tasks/assignments');
+        const assignData = await assignRes.json();
+        if (assignData.success) {
+          const mapping: Record<string, string> = {};
+          assignData.assignments.forEach((a: any) => {
+            mapping[a.taskId] = a.userId;
+          });
+          setTaskAssignments(mapping);
+        }
+
       } catch (err: any) {
-        setErrorMSG(err.message || 'Falha na conexão com a API local');
+        setErrorMSG(err.message || 'Falha na conexão com a API');
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchTasks();
-  }, []);
+    fetchData();
+  }, [isAdmin, isGestor]);
 
   const getPriorityClass = (priority: string) => {
     switch(priority) {
@@ -85,12 +105,21 @@ export default function Projects() {
     // 0. Ocultar as que já foram aprovadas (movidas para Projetos)
     if (approvedTasks.has(task.id)) return false;
 
-    // 1. Filtro Fixo/Hardcoded: Mostrar APENAS demandas da Raissa, Ingrid e Kaique
-    const rawLogin = task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '';
-    const login = rawLogin.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const isTechOwner = login.includes('ingrid') || login.includes('raissa') || login.includes('kaique');
-    
-    if (!isTechOwner) return false;
+    // 1. Regra de Atribuição (NOVO)
+    // Se for Desenvolvedor (e não Admin/Gestor), vê apenas o que está assinado para ele no banco
+    const isDeveloperOnly = !isAdmin && !isGestor;
+    const assignedUserId = taskAssignments[task.id];
+
+    if (isDeveloperOnly) {
+      if (assignedUserId !== user?.id) return false;
+    } else {
+      // Para Gestores: Filtro opcional? 
+      // Por enquanto mostra tudo da Raissa/Ingrid/Kaique por padrão para não poluir
+      const rawLogin = task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '';
+      const login = rawLogin.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const isTechOwner = login.includes('ingrid') || login.includes('raissa') || login.includes('kaique');
+      if (!isTechOwner) return false;
+    }
 
     // 2. Filtro de Busca (Title, Client, TaskID)
     if (searchTerm) {
@@ -127,25 +156,48 @@ export default function Projects() {
     return da - db;
   });
 
-  const handleApprove = (task: KanbanTask) => {
-    const savedInternal = localStorage.getItem('f2f_internal_projects');
-    let existing = [];
-    if (savedInternal) {
-       try { existing = JSON.parse(savedInternal); } catch (e) {}
-    }
+  const handleApprove = async (task: KanbanTask) => {
+    const targetUserId = selectedDevs[task.id];
     
-    // Adiciona apenas se já não existir
-    if (!existing.some((t: any) => t.id === task.id)) {
-       existing.push({ ...task, column: 'todo', internalStatus: 'A Fazer' });
-       localStorage.setItem('f2f_internal_projects', JSON.stringify(existing));
+    if (!targetUserId) {
+      alert('Selecione um desenvolvedor para atribuir esta tarefa.');
+      return;
     }
-    
-    // Esconder da UI
-    setApprovedTasks(prev => {
-       const next = new Set(prev);
-       next.add(task.id);
-       return next;
-    });
+
+    try {
+      const res = await fetch('/api/tasks/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: task.id,
+          title: task.title,
+          client: task.client,
+          targetUserId
+        })
+      });
+
+      if (!res.ok) throw new Error('Erro ao salvar atribuição');
+
+      // Atualiza estado local
+      setTaskAssignments(prev => ({ ...prev, [task.id]: targetUserId }));
+      setApprovedTasks(prev => {
+         const next = new Set(prev);
+         next.add(task.id);
+         return next;
+      });
+
+      // Feedback opcional (localstorage mantido como redundância para a aba de projetos legada)
+      const savedInternal = localStorage.getItem('f2f_internal_projects');
+      let existing = [];
+      if (savedInternal) try { existing = JSON.parse(savedInternal); } catch (e) {}
+      if (!existing.some((t: any) => t.id === task.id)) {
+         existing.push({ ...task, column: 'todo', internalStatus: 'A Fazer' });
+         localStorage.setItem('f2f_internal_projects', JSON.stringify(existing));
+      }
+
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    }
   };
 
   const clearFilters = () => {
@@ -312,14 +364,32 @@ export default function Projects() {
                     </div>
 
                     {/* 7. Ação */}
-                    <div className={styles.cellCol}>
-                       <button 
-                          className={styles.approveBtn} 
-                          onClick={(e) => { e.stopPropagation(); handleApprove(task); }}
-                          title="Aprovar para Início e mover para Meus Projetos"
-                        >
-                          <CheckCircle size={14} /> Aprovar
-                        </button>
+                    <div className={styles.cellCol} onClick={(e) => e.stopPropagation()}>
+                       { (isAdmin || isGestor) ? (
+                         <div className={styles.assignActionGroup}>
+                           <select 
+                             className={styles.devSelect}
+                             value={selectedDevs[task.id] || taskAssignments[task.id] || ''}
+                             onChange={(e) => setSelectedDevs(prev => ({ ...prev, [task.id]: e.target.value }))}
+                           >
+                             <option value="">Atribuir a...</option>
+                             {allUsers.filter(u => u.roles.includes('DESENVOLVEDOR')).map(u => (
+                               <option key={u.id} value={u.id}>{u.name}</option>
+                             ))}
+                           </select>
+                           <button 
+                              className={styles.approveBtn} 
+                              onClick={() => handleApprove(task)}
+                              title="Confirmar Atribuição e mover para Projetos"
+                            >
+                              <CheckCircle size={14} /> Atribuir
+                            </button>
+                         </div>
+                       ) : (
+                         <div className={styles.assignedBadge}>
+                           <CheckCircle size={14} /> Assinada para você
+                         </div>
+                       )}
                     </div>
 
                   </div>

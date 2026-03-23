@@ -35,17 +35,14 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
 
 // --- Component ---
 export default function InternalProjects() {
-  const { user } = useAuth();
+  const { user, isGestor, isGerente, isDev, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'kanban' | 'sprint'>('kanban');
   const [tasks, setTasks] = useState<any[]>([]);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, taskId: string | null }>({ x: 0, y: 0, taskId: null });
 
-  const isGestor = user?.role === 'GESTOR';
-  const isGerente = user?.role === 'ADMINISTRADOR';
-  const isDev = user?.role === 'DESENVOLVEDOR';
-  const isAdmin = isGestor || isGerente;
+
 
   useEffect(() => {
     const handleClick = () => setContextMenu({ ...contextMenu, taskId: null });
@@ -85,23 +82,34 @@ export default function InternalProjects() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('f2f_internal_projects');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Ensure tasks have necessary fields for Sprint View
-        setTasks(parsed.map((t: any) => ({
-          ...t,
-          client: t.client || 'Geral',
-          trackedTime: t.trackedTime || '0h',
-          estimation: t.estimation || '--',
-          qaDelivery: t.qaDelivery || '--',
-          dueDate: t.dueDate || '--',
-          createdAt: t.createdAt || '18/03/26'
-        })));
-      } catch(e) {}
-    }
+    fetchAssignments();
   }, []);
+
+  const fetchAssignments = async () => {
+    try {
+      const res = await fetch('/api/tasks/assignments');
+      const data = await res.json();
+      if (data.assignments) {
+        const mappedTasks = data.assignments.map((a: any) => ({
+          id: a.taskId,
+          title: a.title,
+          client: a.client,
+          column: a.column || 'todo',
+          assignee: a.user?.name || 'U',
+          priority: 'high', // mock por enquanto
+          trackedTime: '0h',
+          estimation: a.estimationHr || '--',
+          qaApproved: a.qaApproved || false,
+          qaDelivery: a.qaApproved ? 'Aprovado' : 'Pendente',
+          dueDate: '--',
+          createdAt: new Date(a.createdAt).toLocaleDateString('pt-BR')
+        }));
+        setTasks(mappedTasks);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // --- Kanban Handlers ---
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -109,13 +117,34 @@ export default function InternalProjects() {
     e.dataTransfer.setData('taskId', taskId);
   };
 
-  const handleDrop = (e: React.DragEvent, targetColId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetColId: string) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId') || draggedTaskId;
+    
     if (taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      
+      // Validação de QC: Não pode ir para Done se não tiver aprovação e estiver saindo de InReview
+      if (targetColId === 'done' && task && !task.qaApproved) {
+         alert('Esta demanda precisa ser aprovada no Quality Check para ser finalizada.');
+         setDraggedTaskId(null);
+         setDragOverColumnId(null);
+         return;
+      }
+
+      // Otimista
       const updated = tasks.map(t => t.id === taskId ? { ...t, column: targetColId } : t);
       setTasks(updated);
-      localStorage.setItem('f2f_internal_projects', JSON.stringify(updated));
+
+      try {
+        await fetch('/api/tasks/assignments/column', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ taskId, column: targetColId })
+        });
+      } catch (err) {
+        alert('Erro ao mover tarefa no DB.');
+      }
     }
     setDraggedTaskId(null);
     setDragOverColumnId(null);
@@ -138,6 +167,21 @@ export default function InternalProjects() {
         totalMinutes += parseInt(match[1]) * 60 + (parseInt(match[2]) || 0);
       }
     });
+
+    // Add API estimations
+    tasksInGroup.forEach(t => {
+       if (t.estimation !== '--') {
+          const mApi = t.estimation.match(/(\d+)h\s*(\d*)m?/);
+          if (mApi) {
+             const h = parseInt(mApi[1]) || 0;
+             const m = parseInt(mApi[2]) || 0;
+             totalMinutes += (h * 60) + m;
+          } else if (t.estimation.includes('m')) {
+             totalMinutes += parseInt(t.estimation);
+          }
+       }
+    });
+
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
     return `${h}h ${m > 0 ? m + 'm' : ''}`;
@@ -161,15 +205,13 @@ export default function InternalProjects() {
              <Kanban size={16} style={{ marginRight: 8, display: 'inline', verticalAlign: 'middle' }} />
              Quadro
            </button>
-           {isAdmin && (
-             <button 
-               className={`${styles.tabBtn} ${activeTab === 'sprint' ? styles.activeTabBtn : ''}`}
-               onClick={() => setActiveTab('sprint')}
-             >
-               <ListTodo size={16} style={{ marginRight: 8, display: 'inline', verticalAlign: 'middle' }} />
-               Sprint
-             </button>
-           )}
+           <button 
+             className={`${styles.tabBtn} ${activeTab === 'sprint' ? styles.activeTabBtn : ''}`}
+             onClick={() => setActiveTab('sprint')}
+           >
+             <ListTodo size={16} style={{ marginRight: 8, display: 'inline', verticalAlign: 'middle' }} />
+             Sprint
+           </button>
         </div>
 
         <div className={styles.headerActions}>

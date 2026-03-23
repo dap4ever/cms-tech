@@ -1,13 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'GESTOR' | 'ADMINISTRADOR' | 'DESENVOLVEDOR';
+  roles: ('GESTOR' | 'ADMINISTRADOR' | 'DESENVOLVEDOR')[];
+  avatarUrl?: string;
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -27,24 +29,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Tenta carregar o usuário do localStorage ou de um endpoint de /api/auth/me
     const checkAuth = async () => {
       try {
+        // Carregamento inicial rápido do localStorage para evitar flickering
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          
+          // Redirecionamento preventivo se já soubermos que precisa mudar senha
+          if (parsedUser.mustChangePassword && pathname !== '/profile' && pathname !== '/login') {
+            router.push('/profile');
+          }
+        }
+
+        // Validação real com o servidor
+        const res = await fetch('/api/auth/me');
+        
+        if (res.ok) {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data.success && data.user) {
+              setUser(data.user);
+              localStorage.setItem('user', JSON.stringify(data.user));
+
+              // Força troca de senha se necessário
+              if (data.user.mustChangePassword && pathname !== '/profile' && pathname !== '/login') {
+                router.push('/profile');
+              }
+            } else {
+              setUser(null);
+              localStorage.removeItem('user');
+            }
+          }
+        } else if (res.status === 401 || res.status === 404) {
+          // Usuário não existe mais ou sessão expirou
+          setUser(null);
+          localStorage.removeItem('user');
+          if (pathname !== '/login') {
+            router.push('/login');
+          }
         }
       } catch (err) {
-        console.error('Failed to parse stored user');
+        console.error('Auth verification failed:', err);
       } finally {
         setLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+  }, [pathname, router]);
 
   const login = (userData: User) => {
     setUser(userData);
@@ -63,9 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isGestor = user?.role === 'GESTOR';
-  const isGerente = user?.role === 'ADMINISTRADOR';
-  const isDev = user?.role === 'DESENVOLVEDOR';
+  const isGestor = user?.roles?.includes('GESTOR') || (user as any)?.role === 'GESTOR' || false;
+  const isGerente = user?.roles?.includes('ADMINISTRADOR') || (user as any)?.role === 'ADMINISTRADOR' || false;
+  const isDev = user?.roles?.includes('DESENVOLVEDOR') || (user as any)?.role === 'DESENVOLVEDOR' || false;
   const isAdmin = isGestor || isGerente;
 
   return (

@@ -12,7 +12,7 @@ export async function getUsers() {
         id: true,
         name: true,
         email: true,
-        role: true,
+        roles: true,
         createdAt: true
       }
     });
@@ -22,7 +22,7 @@ export async function getUsers() {
   }
 }
 
-export async function createUser(data: { name: string, email: string, passwordHash?: string, role?: any }) {
+export async function createUser(data: { name: string, email: string, passwordHash?: string, roles?: any[] }) {
   try {
     // Default password for new users if not provided
     const password = data.passwordHash || 'Mudar@123';
@@ -33,7 +33,7 @@ export async function createUser(data: { name: string, email: string, passwordHa
         name: data.name,
         email: data.email,
         passwordHash: hashedPassword,
-        role: data.role || 'DESENVOLVEDOR'
+        roles: data.roles || ['DESENVOLVEDOR']
       }
     });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Bell, Plus, LogOut, User } from 'lucide-react';
+import Link from 'next/link';
 import styles from './Topbar.module.css';
 import { useAuth } from '@/context/AuthContext';
 
@@ -19,11 +20,19 @@ export function Topbar() {
       </div>
 
       <div className={styles.actions}>
-        <div className={styles.userInfo}>
-          <User size={18} className={styles.userIcon} />
-          <span className={styles.userName}>{user?.name || 'Carregando...'}</span>
-          <span className={styles.userRole}>{user?.role}</span>
-        </div>
+        <Link href="/profile" className={styles.userInfo}>
+          <div className={styles.rolesSection}>
+            <span className={styles.userName}>{user?.name}</span>
+            <span className={styles.userRole}>{user?.roles?.join(', ')}</span>
+          </div>
+          <div className={styles.avatar}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className={styles.avatarImg} />
+            ) : (
+              user?.name ? user.name.split(' ').map(i => i[0]).join('').toUpperCase().substring(0, 2) : '...'
+            )}
+          </div>
+        </Link>
 
         <button className={styles.iconButton} aria-label="Criar novo">
           <Plus size={20} />

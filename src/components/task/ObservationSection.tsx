@@ -69,6 +69,21 @@ export function ObservationSection({ taskId, historyItems }: ObservationSectionP
       // Salvar no localstorage para não perder o resumo
       localStorage.setItem(storageKeyAi, data.summary);
 
+      // Salvar a estimativa no DB se a IA retornou
+      if (data.totalEstimatedStr) {
+         fetch("/api/tasks/estimate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ taskId, estimationHr: data.totalEstimatedStr })
+         }).then(r => r.json()).then(res => {
+            if (res.success) {
+               alert(`Estimativa definida pelo Tech Lead IA: ${data.totalEstimatedStr} (inclui 10% QA).`);
+            } else {
+               console.warn("Nao foi possivel salvar estimativa no BD", res.error);
+            }
+         }).catch(console.error);
+      }
+
     } catch (error: any) {
       console.error(error);
       alert(error.message || "Ocorreu um erro inesperado.");

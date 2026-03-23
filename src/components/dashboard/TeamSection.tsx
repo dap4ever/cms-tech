@@ -57,7 +57,7 @@ export function TeamSection() {
            addTeamMember({
               id: u.id,
               name: u.name,
-              role: u.role || 'Equipe',
+              role: (u as any).roles?.[0] || 'Equipe',
               color: '#7c3aed',
               status: 'Disponível',
               turno: '09:00 - 18:00',
@@ -94,7 +94,7 @@ export function TeamSection() {
     });
   };
 
-  const isAdmin = user?.role === 'GESTOR' || user?.role === 'ADMINISTRADOR';
+  const isAdmin = user?.roles?.includes('GESTOR') || user?.roles?.includes('ADMINISTRADOR');
 
   if (!isLoaded) return <div>Carregando ativos da equipe...</div>;
 

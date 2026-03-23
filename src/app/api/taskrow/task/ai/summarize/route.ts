@@ -32,8 +32,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Nenhuma ação relevante encontrada no histórico.' }, { status: 400 });
     }
 
-    // Google Gemini API Settings
-    const GEMINI_API_KEY = 'AIzaSyCEPACKf42uM_cHTMMsfrFdQ-JhnSA9yNM';
+    // Google Gemini API Settings configurada via variável de ambiente para segurança
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
+        return NextResponse.json({ error: 'Chave da API do Gemini não configurada (GEMINI_API_KEY).' }, { status: 500 });
+    }
     
     // Inicializar o cliente oficial da nuvem do Google GenAI
     const { GoogleGenAI } = await import('@google/genai');
@@ -46,10 +49,11 @@ Seu objetivo é analisar este histórico e gerar um **Guia de Implementação (A
 
 Não faça apenas um resumo do que solicitaram. Em vez disso:
 1. Extraia o objetivo principal da demanda.
-2. Forneça orientação técnica e os passos lógicos necessários para a implementação (arquivos prováveis, lógicas de front/back, cuidados com performance ou dados antigos, etc.).
+2. Forneça orientação técnica e os passos lógicos necessários para a implementação.
 3. Liste qualquer pendência de negócio que o dev deve perguntar para o PO/Cliente antes de começar.
+4. OBRIGATÓRIO: Baseado na complexidade (se parecem ser ajustes simples, ou sistema complexo), forneça uma estimativa de tempo ideal para essa demanda, APENAS O NÚMERO em minutos, usando EXATAMENTE esta tag visível no final do texto: [ESTIMATIVA_DEV_MINUTOS: <numero>]
 
-Seja direto, profissional e formate a sua resposta em Markdown.
+Seja direto, profissional e formate a sua resposta de resto em Markdown.
 
 Histórico da Tarefa:
 ${historyText}
@@ -70,7 +74,20 @@ Por favor, forneça o guia de orientação e os próximos passos:
             throw new Error('Resposta vazia da IA.');
         }
 
-        return NextResponse.json({ summary });
+        // Lógica de cálculo da estimativa + 10% QA
+        let totalEstimatedStr = null;
+        const estMatch = summary.match(/\[ESTIMATIVA_DEV_MINUTOS:\s*(\d+)\]/i);
+        if (estMatch && estMatch[1]) {
+           const devMinutes = parseInt(estMatch[1], 10);
+           const qaMinutes = Math.ceil(devMinutes * 0.10);
+           const totalMinutes = devMinutes + qaMinutes;
+           
+           const h = Math.floor(totalMinutes / 60);
+           const m = totalMinutes % 60;
+           totalEstimatedStr = h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`;
+        }
+
+        return NextResponse.json({ summary, totalEstimatedStr });
     } catch (apiError: any) {
         console.error('Gemini SDK Error:', apiError);
         

@@ -26,7 +26,7 @@ export function UserSection() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'DESENVOLVEDOR'
+    roles: ['DESENVOLVEDOR'] as string[]
   });
 
   const loadUsers = async () => {
@@ -49,7 +49,7 @@ export function UserSection() {
     
     if (res.success) {
       setMessage({ type: 'success', text: 'Usuário criado com sucesso!' });
-      setFormData({ name: '', email: '', role: 'DESENVOLVEDOR' });
+      setFormData({ name: '', email: '', roles: ['DESENVOLVEDOR'] });
       loadUsers();
     } else {
       setMessage({ type: 'error', text: res.error || 'Erro ao criar usuário.' });
@@ -106,17 +106,25 @@ export function UserSection() {
              </div>
 
              <div className="inputGroup">
-                <label>Nível de Acesso (Em breve)</label>
-                <select 
-                  className={styles.premiumInput}
-                  value={formData.role}
-                  onChange={e => setFormData({ ...formData, role: e.target.value })}
-                  disabled
-                >
-                   <option value="DESENVOLVEDOR">Desenvolvedor</option>
-                   <option value="GESTOR">Gestor</option>
-                   <option value="ADMINISTRADOR">Administrador</option>
-                </select>
+                <label>Níveis de Acesso</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                   {['GESTOR', 'ADMINISTRADOR', 'DESENVOLVEDOR'].map((r) => (
+                      <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', textTransform: 'none' }}>
+                         <input 
+                            type="checkbox"
+                            checked={formData.roles.includes(r)}
+                            onChange={(e) => {
+                               const newRoles = e.target.checked 
+                                  ? [...formData.roles, r]
+                                  : formData.roles.filter(x => x !== r);
+                               if (newRoles.length === 0 && r === 'DESENVOLVEDOR') return;
+                               setFormData({ ...formData, roles: newRoles });
+                            }}
+                         />
+                         {r.charAt(0) + r.slice(1).toLowerCase()}
+                      </label>
+                   ))}
+                </div>
              </div>
 
              {message && (
@@ -209,7 +217,7 @@ export function UserSection() {
                              padding: '4px 8px',
                              borderRadius: '6px'
                           }}>
-                             {user.role}
+                             {user.roles && user.roles.length > 0 ? user.roles.join(', ') : 'Nenhum'}
                           </span>
                           <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                              Desde {new Date(user.createdAt).toLocaleDateString('pt-BR')}

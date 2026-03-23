@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
     }
 
-    console.log('User found in DB:', user.email, 'with role:', user.role);
+    console.log('User found in DB:', user.email, 'with roles:', user.roles);
 
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
@@ -34,13 +34,20 @@ export async function POST(request: Request) {
     const token = await createToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
       name: user.name,
     });
 
     const response = NextResponse.json({ 
       success: true, 
-      user: { id: user.id, email: user.email, name: user.name, role: user.role } 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        roles: user.roles,
+        avatarUrl: (user as any).avatarUrl,
+        mustChangePassword: (user as any).mustChangePassword
+      } 
     });
 
     // Seta o cookie de sessão

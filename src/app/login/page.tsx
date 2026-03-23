@@ -48,7 +48,7 @@ export default function LoginPage() {
 
       // Sucesso! Atualiza o estado global e redireciona
       login(data.user);
-      router.push('/dashboard');
+      router.push('/taskrow');
       router.refresh();
     } catch (err: any) {
       // Melhora a mensagem de erro para o usuário

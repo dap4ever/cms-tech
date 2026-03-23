@@ -27,7 +27,7 @@ async function main() {
       email,
       name,
       passwordHash,
-      role: 'GESTOR',
+      roles: ['GESTOR'],
     },
   });
 
