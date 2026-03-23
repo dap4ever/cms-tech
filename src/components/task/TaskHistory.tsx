@@ -68,7 +68,18 @@ export function TaskHistory({ items, taskOwner }: TaskHistoryProps) {
                     <div className={styles.avatar} style={{ width: 24, height: 24, fontSize: '0.6rem' }}>{actorName.substring(0, 2).toUpperCase()}</div>
                     <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{actorName}</strong>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {item.Date ? new Date(parseInt(item.Date.match(/\d+/)[0], 10)).toLocaleString('pt-BR') : 'Data desconhecida'}
+                      {(() => {
+                        const rawDate = item.Date || item.TaskItemDate;
+                        if (!rawDate) return 'Data desconhecida';
+                        let finalDate: Date;
+                        if (typeof rawDate === 'string' && rawDate.includes('/Date(')) {
+                          const ms = parseInt(rawDate.match(/\d+/)?.[0] || '0', 10);
+                          finalDate = new Date(ms);
+                        } else {
+                          finalDate = new Date(rawDate);
+                        }
+                        return isNaN(finalDate.getTime()) ? 'Data inválida' : finalDate.toLocaleString('pt-BR');
+                      })()}
                     </span>
                     {(isAdmin || user?.name === actorName || user?.email?.split('@')[0] === actorName) && (
                       <button 

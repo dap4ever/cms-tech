@@ -12,7 +12,17 @@ export async function POST(req: Request) {
     let historyText = '';
     historyItems.forEach((item: any) => {
        const actorName = item.CreationUserLogin || item.NewOwnerName || item.Request?.CreationUserLogin || 'Usuário';
-       const date = item.Date ? new Date(parseInt(item.Date.match(/\d+/)[0], 10)).toLocaleString('pt-BR') : 'Data desconhecida';
+       const rawDate = item.Date || item.TaskItemDate;
+       let dateStr = 'Data desconhecida';
+       if (rawDate) {
+         if (typeof rawDate === 'string' && rawDate.includes('/Date(')) {
+           dateStr = new Date(parseInt(rawDate.match(/\d+/)?.[0] || '0', 10)).toLocaleString('pt-BR');
+         } else {
+           const d = new Date(rawDate);
+           dateStr = isNaN(d.getTime()) ? 'Data inválida' : d.toLocaleString('pt-BR');
+         }
+       }
+       const date = dateStr;
        let action = '';
        
        if (item.NewOwnerName) {

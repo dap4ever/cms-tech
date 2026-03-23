@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -9,24 +9,24 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  roles        Role[]   @default([DESENVOLVEDOR])
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  passwordHash       String
+  roles              Role[]           @default([DESENVOLVEDOR])
   avatarUrl          String?
-  mustChangePassword Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  assignments  TaskAssignment[]
+  mustChangePassword Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  assignments        TaskAssignment[]
 }
 
 model TaskAssignment {
-  id         String   @id @default(cuid())
-  taskId     String   @unique // ID do Taskrow (ex: TR-216967)
+  id           String   @id @default(cuid())
+  taskId       String   @unique // ID do Taskrow (ex: TR-216967)
   title        String
   client       String
-  userId       String   // ID do User local
+  userId       String // ID do User local
   status       String   @default("ASSIGNED")
   column       String   @default("todo") // todo, inProgress, inReview, done
   estimationHr String?
@@ -34,7 +34,6 @@ model TaskAssignment {
   user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
 }
-
 
 model GlobalSettings {
   id                 String   @id @default("global")
