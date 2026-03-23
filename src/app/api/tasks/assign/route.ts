@@ -15,11 +15,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 });
     }
 
-    // Upsert assignment: se já existe, atualiza o usuário, senão cria
+    // Upsert assignment: se já existe, acumula o usuário conectando-o; senão, cria e conecta.
     const assignment = await (prisma as any).taskAssignment.upsert({
       where: { taskId },
-      update: { userId: targetUserId, title, client },
-      create: { taskId, title, client, userId: targetUserId }
+      update: { title, client, users: { connect: { id: targetUserId } } },
+      create: { taskId, title, client, users: { connect: { id: targetUserId } } }
     });
 
     return NextResponse.json({ success: true, assignment });

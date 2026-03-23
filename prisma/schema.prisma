@@ -18,7 +18,7 @@ model User {
   mustChangePassword Boolean          @default(true)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
-  assignments        TaskAssignment[]
+  assignments        TaskAssignment[] @relation("TaskAssignees")
 }
 
 model TaskAssignment {
@@ -26,12 +26,12 @@ model TaskAssignment {
   taskId       String   @unique // ID do Taskrow (ex: TR-216967)
   title        String
   client       String
-  userId       String // ID do User local
+  users        User[]   @relation("TaskAssignees")
   status       String   @default("ASSIGNED")
   column       String   @default("todo") // todo, inProgress, inReview, done
   estimationHr String?
+  trackedTime  String?  @default("0h")
   qaApproved   Boolean  @default(false)
-  user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
 }
 

@@ -13,6 +13,8 @@ import styles from './task.module.css';
 import { TimeTracker } from '@/components/task/TimeTracker';
 import { ObservationSection } from '@/components/task/ObservationSection';
 import { TaskHistory } from '@/components/task/TaskHistory';
+import { TaskTitleEditor } from '@/components/task/TaskTitleEditor';
+import { PrismaClient } from '@prisma/client';
 
 // Reescreve URLs de imagens Taskrow para usar nosso proxy local (necessário pois img tags não podem enviar headers auth)
 function rewriteTaskrowImages(html: string): string {
@@ -98,11 +100,17 @@ export default async function TaskDetail(props: {
   const { id } = params;
   const isFromProjects = searchParams.from === 'projects';
   
-  let task = null;
+  let task: any = null;
   let errorMsg = null;
+  let dbAssignment = null;
 
   try {
+    const prisma = new PrismaClient();
     task = await getTaskData(id);
+    dbAssignment = await (prisma as any).taskAssignment.findUnique({
+      where: { taskId: id },
+      include: { users: { select: { id: true, name: true, avatarUrl: true } } }
+    });
   } catch (err: any) {
     errorMsg = err.message || 'Erro ao processar dados da tarefa';
   }
@@ -112,6 +120,27 @@ export default async function TaskDetail(props: {
   }
 
   if (!task) notFound();
+
+  // Interligação DB -> UI (Mescla Mock do Taskrow com Dados Reais da F2F Tech)
+  if (dbAssignment) {
+    task.originalTitle = task.title;
+    if (dbAssignment.title && dbAssignment.title !== task.title) {
+      task.title = dbAssignment.title;
+    }
+    
+    if (dbAssignment.users && dbAssignment.users.length > 0) {
+      task.dbUsers = dbAssignment.users;
+    }
+
+    if (dbAssignment.trackedTime) {
+      const ms = parseFloat(dbAssignment.trackedTime);
+      task.hoursTracked = isNaN(ms) ? 0 : parseFloat((ms / 3600).toFixed(1));
+    }
+
+    if (dbAssignment.estimationHr) {
+      task.hoursEstimated = parseFloat(dbAssignment.estimationHr) || 0;
+    }
+  }
 
   const progressPercentage = Math.min((task.hoursTracked / task.hoursEstimated) * 100, 100) || 0;
 
@@ -123,7 +152,7 @@ export default async function TaskDetail(props: {
         </Link>
         <div className={styles.titleSection}>
           <span className={styles.taskId}>{task.id}</span>
-          <h1 className={styles.taskTitle}>{task.title}</h1>
+          <TaskTitleEditor taskId={task.id} defaultTitle={task.title} originalTitle={task.originalTitle || task.title} />
         </div>
         <div className={styles.metaBadges}>
           <span className={styles.badgeSolid}>{task.status}</span>
@@ -212,15 +241,26 @@ export default async function TaskDetail(props: {
           />
 
           <div className={styles.card}>
-            <h3 className={styles.sideTitle}>Responsável atual</h3>
-            <div className={styles.userRow}>
-              <div className={styles.avatar}>{task.owner.substring(0,2).toUpperCase()}</div>
-              <span className={styles.userName}>{task.owner}</span>
+            <h3 className={styles.sideTitle}>Responsáveis Atuais</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {task.dbUsers && task.dbUsers.length > 0 ? task.dbUsers.map((u: any) => (
+                <div key={u.id} className={styles.userRow}>
+                   <div className={styles.avatar} style={{ backgroundImage: u.avatarUrl ? `url(${u.avatarUrl})` : 'none', backgroundSize: 'cover' }}>
+                      {!u.avatarUrl && u.name.substring(0,2).toUpperCase()}
+                   </div>
+                   <span className={styles.userName}>{u.name}</span>
+                </div>
+              )) : (
+                <div className={styles.userRow}>
+                  <div className={styles.avatar}>{task.owner.substring(0,2).toUpperCase()}</div>
+                  <span className={styles.userName}>{task.owner}</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className={styles.card}>
-            <h3 className={styles.sideTitle}>Contador de Esforço (Horas) <span title="Seu Token atual do Taskrow está restrito para ler Timesheets" style={{cursor: 'help', color: 'orange'}}>⚠️ Mock</span></h3>
+            <h3 className={styles.sideTitle}>Contador de Esforço (Horas)</h3>
             <div className={styles.progressHeader}>
               <span className={styles.timeLabel}>
                 <strong>{task.hoursTracked}h</strong> trackeadas
@@ -242,7 +282,7 @@ export default async function TaskDetail(props: {
             <ul className={styles.metaList}>
               <li>
                 <Calendar size={14} className={styles.metaIcon} />
-                <span>Prazo: {task.dueDate?.split('T')[0] || 'Sem prazo'}</span>
+                <span>Prazo: {task.dueDate && task.dueDate !== 'Nenhuma' ? new Date(task.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Sem prazo'}</span>
               </li>
               <li>
                 <Tag size={14} className={styles.metaIcon} />

@@ -13,8 +13,8 @@ export async function GET() {
     // Para simplificar agora, trazemos todas e o frontend que conhece as roles filtra
     const assignments = await (prisma as any).taskAssignment.findMany({
       include: {
-        user: {
-          select: { name: true, email: true }
+        users: {
+          select: { id: true, name: true, email: true, avatarUrl: true }
         }
       }
     });

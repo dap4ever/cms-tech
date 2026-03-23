@@ -95,7 +95,7 @@ export default function InternalProjects() {
           title: a.title,
           client: a.client,
           column: a.column || 'todo',
-          assignee: a.user?.name || 'U',
+          assignee: a.users && a.users.length > 0 ? a.users.map((u:any) => u.name).join(', ') : 'Não atribuído',
           priority: 'high', // mock por enquanto
           trackedTime: '0h',
           estimation: a.estimationHr || '--',

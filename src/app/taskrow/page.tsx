@@ -29,7 +29,7 @@ export default function Projects() {
   
   // Novos estados para atribuição
   const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [taskAssignments, setTaskAssignments] = useState<Record<string, string>>({});
+  const [taskAssignments, setTaskAssignments] = useState<Record<string, string[]>>({});
   const [selectedDevs, setSelectedDevs] = useState<Record<string, string>>({});
 
   // Estados dos Filtros (Camada 2)
@@ -73,9 +73,11 @@ export default function Projects() {
         const assignRes = await fetch('/api/tasks/assignments');
         const assignData = await assignRes.json();
         if (assignData.success) {
-          const mapping: Record<string, string> = {};
+          const mapping: Record<string, string[]> = {};
           assignData.assignments.forEach((a: any) => {
-            mapping[a.taskId] = a.userId;
+            if (a.users && a.users.length > 0) {
+              mapping[a.taskId] = a.users.map((u:any) => u.id);
+            }
           });
           setTaskAssignments(mapping);
         }
@@ -108,10 +110,10 @@ export default function Projects() {
     // 1. Regra de Atribuição (NOVO)
     // Se for Desenvolvedor (e não Admin/Gestor), vê apenas o que está assinado para ele no banco
     const isDeveloperOnly = !isAdmin && !isGestor;
-    const assignedUserId = taskAssignments[task.id];
+    const assignedUserIds = taskAssignments[task.id] || [];
 
     if (isDeveloperOnly) {
-      if (assignedUserId !== user?.id) return false;
+      if (!user?.id || !assignedUserIds.includes(user.id)) return false;
     } else {
       // Para Gestores: Filtro opcional? 
       // Por enquanto mostra tudo da Raissa/Ingrid/Kaique por padrão para não poluir
@@ -178,8 +180,14 @@ export default function Projects() {
 
       if (!res.ok) throw new Error('Erro ao salvar atribuição');
 
-      // Atualiza estado local
-      setTaskAssignments(prev => ({ ...prev, [task.id]: targetUserId }));
+      // Atualiza estado local adicionando no array
+      setTaskAssignments(prev => {
+        const currentIds = prev[task.id] || [];
+        if (!currentIds.includes(targetUserId)) {
+          return { ...prev, [task.id]: [...currentIds, targetUserId] };
+        }
+        return prev;
+      });
       setApprovedTasks(prev => {
          const next = new Set(prev);
          next.add(task.id);
@@ -369,7 +377,7 @@ export default function Projects() {
                          <div className={styles.assignActionGroup}>
                            <select 
                              className={styles.devSelect}
-                             value={selectedDevs[task.id] || taskAssignments[task.id] || ''}
+                             value={selectedDevs[task.id] || (taskAssignments[task.id] && taskAssignments[task.id][0]) || ''}
                              onChange={(e) => setSelectedDevs(prev => ({ ...prev, [task.id]: e.target.value }))}
                            >
                              <option value="">Atribuir a...</option>

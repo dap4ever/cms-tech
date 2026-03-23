@@ -77,7 +77,10 @@ export function ObservationSection({ taskId, historyItems }: ObservationSectionP
             body: JSON.stringify({ taskId, estimationHr: data.totalEstimatedStr })
          }).then(r => r.json()).then(res => {
             if (res.success) {
-               alert(`Estimativa definida pelo Tech Lead IA: ${data.totalEstimatedStr} (inclui 10% QA).`);
+               // Dispara evento para o TimeTracker.tsx reagir atualizando a recomendação
+               window.dispatchEvent(new CustomEvent('ai_estimation_ready', { 
+                 detail: { taskId, estimationHr: data.totalEstimatedStr } 
+               }));
             } else {
                console.warn("Nao foi possivel salvar estimativa no BD", res.error);
             }

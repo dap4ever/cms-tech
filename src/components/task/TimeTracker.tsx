@@ -16,12 +16,20 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
   const [manualHours, setManualHours] = useState("");
   const [estimation, setEstimation] = useState(initialHoursEstimated.toString());
   const [showSuccess, setShowSuccess] = useState(false);
+  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isDev } = useAuth();
 
-  // Carregar dados salvos
+  // Escutar evento da IA e carregar dados salvos
   useEffect(() => {
+    const handleAiEvent = (e: any) => {
+      if (e.detail?.taskId === taskId) {
+        setAiRecommendation(e.detail.estimationHr);
+      }
+    };
+    window.addEventListener('ai_estimation_ready', handleAiEvent);
+
     const saved = localStorage.getItem(`time_tracker_${taskId}`);
     if (saved) {
       try {
@@ -31,6 +39,10 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
         if (data.manualHours) setManualHours(data.manualHours);
       } catch (e) {}
     }
+
+    return () => {
+      window.removeEventListener('ai_estimation_ready', handleAiEvent);
+    };
   }, [taskId]);
 
   // Lógica do Timer
@@ -63,17 +75,29 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
     }
   };
 
-  const handleSave = () => {
-    const data = {
-      taskId,
-      seconds,
-      estimation,
-      manualHours,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(`time_tracker_${taskId}`, JSON.stringify(data));
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/tasks/assignments/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          seconds,
+          estimation,
+          manualHours
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      } else {
+        alert("Erro ao salvar o tempo: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar progresso de rastreamento.");
+    }
   };
 
   return (
@@ -122,6 +146,11 @@ export function TimeTracker({ taskId, initialHoursEstimated = 0 }: TimeTrackerPr
               value={estimation}
               onChange={(e) => setEstimation(e.target.value)}
             />
+            {aiRecommendation && (
+              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span title="Recomendação da IA Tech Lead">✨</span> A IA recomendou: <strong>{aiRecommendation}</strong>
+              </div>
+            )}
           </div>
         )}
 
