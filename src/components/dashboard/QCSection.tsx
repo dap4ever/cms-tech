@@ -15,6 +15,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useDashboardStore, QCClient, QCTopic, QCAdjustment } from '../../hooks/dashboard/useDashboardStore';
+import { QCEditor } from './QCEditor';
 import styles from './dashboard-premium.module.css';
 
 export function QCSection() {
@@ -119,50 +120,36 @@ export function QCSection() {
   };
 
   return (
-    <div className={`${styles.premiumContainer} ${styles.qcGrid}`}>
-      {/* Client Selection Sidebar */}
-      <aside className={styles.sidebar}>
-        <div style={{ padding: '0 8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-           <Target size={16} color="var(--premium-purple)" />
-           <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Projetos Ativos</span>
-        </div>
-        <div className={styles.clientList}>
-          {clients.map((c, i) => {
-            const { total: t, done: d } = calculateProgress(c);
+    <div className={styles.qcGrid}>
+      {/* Projetos Ativos - Horizontal Tabs */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
+         {clients.map((c, i) => {
             const isSelected = i === activeIndex;
             return (
-              <div 
-                key={c.id} 
-                className={`${styles.clientItem} ${isSelected ? styles.activeClient : ''}`}
+              <button
+                key={c.id}
                 onClick={() => setActiveIndex(i)}
-                style={{ position: 'relative' }}
+                className={`${styles.iconBtn} ${isSelected ? styles.activeTab : ''}`}
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: '12px', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: isSelected ? 'rgba(124, 58, 237, 0.1)' : 'transparent',
+                  border: isSelected ? '1px solid rgba(124, 58, 237, 0.2)' : '1px solid transparent',
+                  color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  whiteSpace: 'nowrap'
+                }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div 
-                    style={{ 
-                      width: '32px', height: '32px', borderRadius: '10px', 
-                      background: isSelected ? `linear-gradient(135deg, ${c.color}, var(--premium-purple))` : c.color,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.7rem', fontWeight: 800, color: 'white',
-                      boxShadow: isSelected ? `0 4px 10px ${c.color}66` : 'none'
-                    }}
-                  >
-                    {c.id}
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.name}
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', opacity: 0.6 }}>
-                      {d} / {t} pendências
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: c.color }}></div>
+                {c.name}
+              </button>
             );
-          })}
-        </div>
-      </aside>
+         })}
+      </div>
 
       {/* Main Content Area */}
       <main className={styles.mainContent}>
@@ -182,13 +169,6 @@ export function QCSection() {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{activeClient.name}</h2>
-                <button 
-                  onClick={handleReset}
-                  className={styles.iconBtn} 
-                  style={{ color: 'var(--status-error)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700 }}
-                >
-                  <RefreshCcw size={14} /> Resetar Auditoria
-                </button>
               </div>
               <div style={{ marginTop: '12px' }}>
                 <div className={styles.progressContainer}>
@@ -206,125 +186,26 @@ export function QCSection() {
         </div>
 
         <section>
-          {activeClient.topicos.map((topic) => (
-            <div key={topic.id} className={styles.glassCard} style={{ marginBottom: '20px', overflow: 'hidden' }}>
-              <div 
-                className={styles.topicHeader}
-                onClick={() => updateTopic(topic.id, { open: !topic.open })}
-                style={{ border: 'none', borderRadius: '0' }}
-              >
-                <div style={{ color: 'var(--premium-purple)' }}>
-                  {topic.open ? <ChevronDown size={20} strokeWidth={3} /> : <ChevronRight size={20} strokeWidth={3} />}
-                </div>
-                <input 
-                  className={styles.premiumInput}
-                  style={{ flex: 1, background: 'transparent !important', border: 'none !important', boxShadow: 'none !important', fontSize: '1rem', fontWeight: 700 }}
-                  value={topic.name}
-                  onChange={(e) => updateTopic(topic.id, { name: e.target.value })}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button 
-                  className={styles.iconBtn} 
-                  onClick={(e) => { e.stopPropagation(); deleteTopic(topic.id); }}
-                  style={{ opacity: 0.3 }}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              {topic.open && (
-                <div style={{ padding: '0 20px 20px' }}>
-                  {topic.ajustes.map((adj, idx) => (
-                    <div key={adj.id} className={styles.adjItem} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ paddingTop: '4px' }}>
-                        <div 
-                          onClick={() => updateAdjustment(topic.id, adj.id, { done: !adj.done })}
-                          style={{ 
-                            width: '24px', height: '24px', borderRadius: '6px', 
-                            border: `2px solid ${adj.done ? 'var(--status-success)' : 'var(--border-color)'}`,
-                            background: adj.done ? 'var(--status-success)' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', transition: 'all 0.2s'
-                          }}
-                        >
-                          {adj.done && <CheckCircle2 size={16} color="white" />}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                           <input 
-                              className={styles.premiumInput}
-                              style={{ flex: 1, fontWeight: 700 }}
-                              value={adj.title}
-                              onChange={(e) => updateAdjustment(topic.id, adj.id, { title: e.target.value })}
-                              placeholder="Título do ajuste ou verificação..."
-                           />
-                           <button className={styles.iconBtn} onClick={() => deleteAdjustment(topic.id, adj.id)} style={{ opacity: 0.3 }}>
-                              <Trash2 size={14} />
-                           </button>
-                        </div>
-                        <textarea 
-                          className={styles.premiumInput}
-                          style={{ width: '100%', minHeight: '60px', color: 'var(--text-secondary)', marginBottom: '12px' }}
-                          value={adj.desc}
-                          onChange={(e) => updateAdjustment(topic.id, adj.id, { desc: e.target.value })}
-                          placeholder="Notas técnicas ou observações..."
-                        />
-                        
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          {adj.img ? (
-                            <div style={{ position: 'relative', width: '160px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
-                              <img src={adj.img} alt="Evidência" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              <button 
-                                onClick={() => updateAdjustment(topic.id, adj.id, { img: null })}
-                                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          ) : (
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--border-color)' }}>
-                               <ImageIcon size={14} /> Adicionar Evidência Visual
-                               <input type="file" accept="image/*" hidden onChange={(e) => handleImageUpload(topic.id, adj.id, e.target.files?.[0] || null)} />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button 
-                    className={styles.textBtn} 
-                    onClick={() => addAdjustment(topic.id)}
-                    style={{ marginTop: '20px', color: 'var(--premium-purple)', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <Plus size={16} strokeWidth={3} /> ADICIONAR ITEM DE VERIFICAÇÃO
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+          <QCEditor 
+            topics={activeClient.topicos} 
+            onChange={(topicos) => updateClient({ ...activeClient, topicos })}
+            onReset={handleReset}
+            title="Grupos de Auditoria"
+          />
           
-          <button 
-            className={styles.premiumButton} 
-            onClick={addTopic}
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '12px' }}
-          >
-            <Layout size={20} /> CRIAR NOVO GRUPO DE AUDITORIA
-          </button>
-        </section>
-
-        <section style={{ marginTop: '48px' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-             <Zap size={16} color="var(--status-warning)" />
-             <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Relato Final do Consultor</h4>
-           </div>
-           <textarea 
-             className={styles.premiumInput}
-             style={{ width: '100%', minHeight: '140px', lineHeight: 1.6 }}
-             value={activeClient.obs}
-             onChange={(e) => updateClient({ ...activeClient, obs: e.target.value })}
-             placeholder="Digite aqui as conclusões gerais da auditoria para este cliente..."
-           />
+          <div style={{ marginTop: '48px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+               <Zap size={16} color="var(--status-warning)" />
+               <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Relato Final do Consultor</h4>
+             </div>
+             <textarea 
+               className={styles.premiumInput}
+               style={{ width: '100%', minHeight: '140px', lineHeight: 1.6 }}
+               value={activeClient.obs}
+               onChange={(e) => updateClient({ ...activeClient, obs: e.target.value })}
+               placeholder="Digite aqui as conclusões gerais da auditoria para este cliente..."
+             />
+          </div>
         </section>
       </main>
 

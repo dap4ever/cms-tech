@@ -46,6 +46,7 @@
   font-size: 0.7rem;
   outline: none;
   width: 100%;
+  color-scheme: dark;
 }
 
 .assignedBadge {
@@ -64,4 +65,57 @@
 
 .approveBtn { background-color: var(--status-success); color: white; border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .approveBtn:hover { opacity: 0.8; }
+
+.approveStartBtn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.approveStartBtn:hover { opacity: 0.85; }
+
+.cancelApproveBtn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.cancelApproveBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.deleteBtn {
+  background-color: transparent;
+  color: var(--status-error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+}
+
+.deleteBtn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--status-error);
+}
 

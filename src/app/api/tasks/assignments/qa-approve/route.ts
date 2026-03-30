@@ -13,7 +13,9 @@ export async function POST(req: Request) {
 
     const updated = await (prismaClient as any).taskAssignment.update({
       where: { taskId },
-      data: { qaApproved: true }
+      data: { 
+        qaApproved: true
+      }
     });
 
     return NextResponse.json({ success: true, assignment: updated });

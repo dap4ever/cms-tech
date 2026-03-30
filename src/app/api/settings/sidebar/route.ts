@@ -17,7 +17,7 @@ export async function PUT(request: Request) {
   const session = await getSession();
   
   // Apenas GESTOR pode alterar as configurações globais da Sidebar
-  const isGestor = session?.roles?.includes('GESTOR') || (session as any)?.role === 'GESTOR';
+  const isGestor = (session?.roles as string[] | undefined)?.includes('GESTOR') || (session as any)?.role === 'GESTOR';
   
   console.log('[Sidebar API] Session:', JSON.stringify(session));
   console.log('[Sidebar API] isGestor check:', isGestor);

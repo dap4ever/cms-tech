@@ -62,6 +62,7 @@ Não faça apenas um resumo do que solicitaram. Em vez disso:
 2. Forneça orientação técnica e os passos lógicos necessários para a implementação.
 3. Liste qualquer pendência de negócio que o dev deve perguntar para o PO/Cliente antes de começar.
 4. OBRIGATÓRIO: Baseado na complexidade (se parecem ser ajustes simples, ou sistema complexo), forneça uma estimativa de tempo ideal para essa demanda, APENAS O NÚMERO em minutos, usando EXATAMENTE esta tag visível no final do texto: [ESTIMATIVA_DEV_MINUTOS: <numero>]
+5. OBRIGATÓRIO: Sugira um título técnico e objetivo para a demanda (máximo 80 caracteres, sem aspas), usando EXATAMENTE esta tag no final do texto: [TITULO_SUGERIDO: <titulo>]
 
 Seja direto, profissional e formate a sua resposta de resto em Markdown.
 
@@ -91,13 +92,21 @@ Por favor, forneça o guia de orientação e os próximos passos:
            const devMinutes = parseInt(estMatch[1], 10);
            const qaMinutes = Math.ceil(devMinutes * 0.10);
            const totalMinutes = devMinutes + qaMinutes;
+           const roundedMinutes = Math.ceil(totalMinutes / 5) * 5;
            
-           const h = Math.floor(totalMinutes / 60);
-           const m = totalMinutes % 60;
+           const h = Math.floor(roundedMinutes / 60);
+           const m = roundedMinutes % 60;
            totalEstimatedStr = h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`;
         }
 
-        return NextResponse.json({ summary, totalEstimatedStr });
+        // Extração do título sugerido
+        let suggestedTitle: string | null = null;
+        const titleMatch = summary.match(/\[TITULO_SUGERIDO:\s*([^\]]+)\]/i);
+        if (titleMatch && titleMatch[1]) {
+           suggestedTitle = titleMatch[1].trim();
+        }
+
+        return NextResponse.json({ summary, totalEstimatedStr, suggestedTitle });
     } catch (apiError: any) {
         console.error('Gemini SDK Error:', apiError);
         

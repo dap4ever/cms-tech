@@ -1,8 +1,24 @@
+.premiumContainer {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 .pageHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 32px;
+  width: 100%;
+  min-width: 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pageContent {
+  width: 100%;
+  min-width: 0;
 }
 
 .titleArea {
@@ -107,11 +123,19 @@
 }
 
 /* Kanban Board */
+.kanbanViewport {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 16px;
+}
+
 .kanbanBoard {
   display: flex;
   gap: 24px;
-  overflow-x: auto;
-  padding-bottom: 16px;
+  width: max-content;
+  min-width: 100%;
   height: calc(100vh - 180px);
 }
 
@@ -188,6 +212,47 @@
   user-select: none;
 }
 
+.cardHasFails {
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.cardHasFails:hover {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+
+.failBadge {
+  background: #ef4444;
+  color: white;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+}
+
+.cardProgressArea {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.cardProgressBar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cardProgressFill {
+  height: 100%;
+  background: #ef4444;
+  transition: width 0.3s ease;
+}
+
 .taskCard:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
@@ -228,6 +293,19 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+}
+
+.cardTimeInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  width: fit-content;
 }
 
 .priorityHigh { background-color: var(--status-error); }
@@ -449,9 +527,52 @@
   color: var(--text-primary);
 }
 
+.sprintHeaderStats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sprintHeaderStats > span {
+  display: none;
+}
+
+.sprintStatChip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 92px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sprintStatLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sprintStatValue {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
 .sprintTable {
   width: 100%;
   border-collapse: collapse;
+  min-width: 1280px;
+}
+
+.sprintTableViewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .sprintTable th {
@@ -515,6 +636,37 @@
   color: var(--text-secondary);
 }
 
+.summaryRow td {
+  font-size: 0;
+  color: transparent;
+}
+
+.summaryRow .sprintSummaryContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.sprintSummaryTitle {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sprintSummaryStats {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .totalLabel {
   color: var(--text-primary);
   margin-left: 8px;
@@ -532,4 +684,27 @@
   cursor: pointer; 
   color: var(--text-secondary); 
   opacity: 0.6; 
+}
+.sprintSelector {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  min-width: 220px;
+}
+
+.sprintSelector:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-surface-hover);
+}
+
+.sprintSelector:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
 }

@@ -7,6 +7,11 @@ import { revalidatePath } from 'next/cache';
 export async function getUsers() {
   try {
     return await prisma.user.findMany({
+      where: {
+        NOT: {
+          email: 'gestor@cms.tech'
+        }
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

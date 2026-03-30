@@ -89,7 +89,7 @@ export function UserSection() {
                   required
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Danilo Alves"
+                  placeholder="Ex: Nome do Colaborador"
                 />
              </div>
 
@@ -101,7 +101,7 @@ export function UserSection() {
                   required
                   value={formData.email}
                   onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="danilo@agenciaf2f.com"
+                  placeholder="exemplo@f2f-digital.com"
                 />
              </div>
 

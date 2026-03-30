@@ -11,6 +11,11 @@ export async function GET() {
 
     // Apenas usuários logados podem ver a lista de outros usuários (pelo menos para atribuição)
     const users = await prisma.user.findMany({
+      where: {
+        NOT: {
+          email: 'gestor@cms.tech'
+        }
+      },
       select: {
         id: true,
         name: true,

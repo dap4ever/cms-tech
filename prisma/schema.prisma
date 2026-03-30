@@ -1,11 +1,12 @@
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "library"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -16,29 +17,76 @@ model User {
   roles              Role[]           @default([DESENVOLVEDOR])
   avatarUrl          String?
   mustChangePassword Boolean          @default(true)
+  isBlocked          Boolean          @default(false)
+  skills             String[]         @default([])
+  firstAccessDone    Boolean          @default(false)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
+  absences           Absence[]
   assignments        TaskAssignment[] @relation("TaskAssignees")
+  timeEntries        TimeEntry[]
+}
+
+model Absence {
+  id        String   @id @default(cuid())
+  userId    String
+  start     DateTime
+  end       DateTime
+  type      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model TaskAssignment {
-  id           String   @id @default(cuid())
-  taskId       String   @unique // ID do Taskrow (ex: TR-216967)
-  title        String
-  client       String
-  users        User[]   @relation("TaskAssignees")
-  status       String   @default("ASSIGNED")
-  column       String   @default("todo") // todo, inProgress, inReview, done
-  estimationHr String?
-  trackedTime  String?  @default("0h")
-  qaApproved   Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id               String      @id @default(cuid())
+  taskId           String      @unique
+  title            String
+  client           String
+  status           String      @default("ASSIGNED")
+  column           String      @default("todo")
+  estimationHr     String?
+  trackedTime      String?     @default("0h")
+  qaApproved       Boolean     @default(false)
+  hasFails         Boolean     @default(false)
+  localObservation String?
+  localImages      String[]    @default([])
+  qcMetadata       Json?
+  priority         String      @default("normal")
+  sprintId         String?
+  aiSummary        String?
+  createdAt        DateTime    @default(now())
+  sprint           Sprint?     @relation(fields: [sprintId], references: [id])
+  users            User[]      @relation("TaskAssignees")
+  timeEntries      TimeEntry[]
+}
+
+model Sprint {
+  id        String           @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String           @default("ACTIVE")
+  createdAt DateTime         @default(now())
+  tasks     TaskAssignment[]
 }
 
 model GlobalSettings {
   id                 String   @id @default("global")
-  hiddenSidebarItems String[] @default([]) // Guarda as rotas ocultas
+  hiddenSidebarItems String[] @default([])
   updatedAt          DateTime @updatedAt
+}
+
+model TimeEntry {
+  id        String         @id @default(cuid())
+  taskId    String
+  userId    String
+  hours     Float
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  task      TaskAssignment @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
 }
 
 enum Role {

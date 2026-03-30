@@ -69,6 +69,17 @@
   outline: none;
 }
 
+.premiumInput::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.2s;
+}
+
+.premiumInput::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 /* Buttons */
 .premiumButton {
   background: linear-gradient(135deg, var(--premium-purple), #4f46e5);
@@ -88,10 +99,22 @@
 
 /* QC Specific */
 .qcGrid {
-  display: grid;
-  grid-template-columns: 300px 1fr;
+  display: flex;
   gap: 32px;
   margin-top: 24px;
+}
+
+.reportGrid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.qcEditorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .topicHeader {

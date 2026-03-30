@@ -127,7 +127,7 @@ export function ReportingSection() {
   };
 
   return (
-    <div className={`${styles.premiumContainer} ${styles.qcGrid}`}>
+    <div className={`${styles.premiumContainer} ${styles.reportGrid}`}>
       <aside className={styles.sidebar}>
         <div style={{ padding: '0 8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
            <FileSearch size={16} color="var(--status-warning)" />

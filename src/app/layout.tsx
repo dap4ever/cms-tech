@@ -8,8 +8,8 @@ import { AuthProvider } from "../context/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DevCMS v0.1 | Gestão de Desenvolvedores",
-  description: "CMS focado na experiência de Desenvolvedores. Visual Dark Mode Premium.",
+  title: "F2F CMS | Gestão de Tecnologia",
+  description: "CMS de gestão de tecnologia da F2F. Visual Dark Mode Premium.",
 };
 
 export default function RootLayout({

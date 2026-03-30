@@ -36,6 +36,15 @@
   display: block;
 }
 
+.logoImg {
+  height: 48px;
+  width: auto;
+  margin-bottom: 8px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .subtitle {
   color: #888;
   font-size: 0.9rem;
@@ -114,6 +123,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.errorBlocked {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
 }
 
 @keyframes fadeIn {

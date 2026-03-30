@@ -14,7 +14,11 @@ import { TimeTracker } from '@/components/task/TimeTracker';
 import { ObservationSection } from '@/components/task/ObservationSection';
 import { TaskHistory } from '@/components/task/TaskHistory';
 import { TaskTitleEditor } from '@/components/task/TaskTitleEditor';
-import { PrismaClient } from '@prisma/client';
+import { ExtraAssigneeManager } from '@/components/task/ExtraAssigneeManager';
+import { QualityReportContainer } from '@/components/task/QualityReportContainer';
+import { TaskGovernance } from '@/components/task/TaskGovernance';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 // Reescreve URLs de imagens Taskrow para usar nosso proxy local (necessário pois img tags não podem enviar headers auth)
 function rewriteTaskrowImages(html: string): string {
@@ -104,13 +108,37 @@ export default async function TaskDetail(props: {
   let errorMsg = null;
   let dbAssignment = null;
 
+  const session = await getSession() as any;
+  const isAdminOrGestor = session && (session.roles?.includes('GESTOR') || session.roles?.includes('ADMINISTRADOR'));
+  const currentUser = session ? { id: session.userId as string, name: session.name as string, roles: (session.roles || []) as string[] } : { id: '', name: 'Anônimo', roles: [] };
+
   try {
-    const prisma = new PrismaClient();
     task = await getTaskData(id);
     dbAssignment = await (prisma as any).taskAssignment.findUnique({
       where: { taskId: id },
-      include: { users: { select: { id: true, name: true, avatarUrl: true } } }
+      include: { users: { select: { id: true, name: true, avatarUrl: true, roles: true } } }
     });
+
+    const [allDbUsers, allSprints, timeEntries] = await Promise.all([
+      (prisma as any).user.findMany({
+         where: { NOT: { email: 'gestor@cms.tech' } },
+         select: { id: true, name: true, roles: true },
+         orderBy: { name: 'asc' }
+      }),
+      (prisma as any).sprint.findMany({
+         orderBy: { startDate: 'asc' }
+      }),
+      (prisma as any).timeEntry.findMany({
+         where: { taskId: id },
+         include: { user: { select: { id: true, name: true, avatarUrl: true, roles: true } } },
+         orderBy: { updatedAt: 'desc' },
+      }),
+    ]);
+
+    task.allProjectUsers = allDbUsers;
+    task.allSprints = allSprints;
+    task.timeEntries = timeEntries;
+
   } catch (err: any) {
     errorMsg = err.message || 'Erro ao processar dados da tarefa';
   }
@@ -137,18 +165,28 @@ export default async function TaskDetail(props: {
       task.hoursTracked = isNaN(ms) ? 0 : parseFloat((ms / 3600).toFixed(1));
     }
 
+    // Se há entradas na tabela TimeEntry, o total é a soma delas
+    if (task.timeEntries && task.timeEntries.length > 0) {
+      const sumHours = task.timeEntries.reduce((s: number, e: any) => s + e.hours, 0);
+      task.hoursTracked = parseFloat(sumHours.toFixed(1));
+    }
+
     if (dbAssignment.estimationHr) {
       task.hoursEstimated = parseFloat(dbAssignment.estimationHr) || 0;
     }
   }
 
-  const progressPercentage = Math.min((task.hoursTracked / task.hoursEstimated) * 100, 100) || 0;
+  const progressPercentage = (task.hoursTracked / task.hoursEstimated) * 100 || 0;
+  const isOverBudget = progressPercentage > 100;
+
+  const backUrl = isFromProjects || dbAssignment ? "/projects" : "/taskrow";
+  const backLabel = isFromProjects || dbAssignment ? "Voltar para Projetos" : "Voltar para o Caixa de Entrada";
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <Link href={isFromProjects ? "/projects" : "/taskrow"} className={styles.backButton}>
-          <ArrowLeft size={16} /> {isFromProjects ? "Voltar para Projetos" : "Voltar para o Caixa de Entrada"}
+        <Link href={backUrl} className={styles.backButton}>
+          <ArrowLeft size={16} /> {backLabel}
         </Link>
         <div className={styles.titleSection}>
           <span className={styles.taskId}>{task.id}</span>
@@ -165,7 +203,22 @@ export default async function TaskDetail(props: {
         {/* Coluna Principal da Descrição e Chat */}
         <div className={styles.mainCol}>
           
-          <ObservationSection taskId={task.id} historyItems={task.details?.NewTaskItems || []} />
+          {dbAssignment && dbAssignment.qcMetadata && (
+            <QualityReportContainer 
+              taskId={task.id} 
+              initialTopics={dbAssignment.qcMetadata} 
+            />
+          )}
+
+          {dbAssignment && (
+            <ObservationSection 
+              taskId={task.id} 
+              historyItems={task.details?.NewTaskItems || []} 
+              initialObservation={dbAssignment.localObservation || ""}
+              initialImages={dbAssignment.localImages || []}
+              initialAiSummary={dbAssignment.aiSummary || ""}
+            />
+          )}
 
           {/* Anexos Principais (Galeria) */}
           {/* Anexos Principais (Galeria do RawData ou TaskDetail) */}
@@ -237,23 +290,64 @@ export default async function TaskDetail(props: {
         <div className={styles.sideCol}>
           <TimeTracker 
             taskId={task.id} 
-            initialHoursEstimated={task.hoursEstimated} 
+            initialHoursEstimated={task.hoursEstimated}
+            initialHoursTracked={task.hoursTracked}
+            currentUser={currentUser}
+            timeEntries={task.timeEntries || []}
           />
 
-          <div className={styles.card}>
-            <h3 className={styles.sideTitle}>Responsáveis Atuais</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {task.dbUsers && task.dbUsers.length > 0 ? task.dbUsers.map((u: any) => (
-                <div key={u.id} className={styles.userRow}>
-                   <div className={styles.avatar} style={{ backgroundImage: u.avatarUrl ? `url(${u.avatarUrl})` : 'none', backgroundSize: 'cover' }}>
-                      {!u.avatarUrl && u.name.substring(0,2).toUpperCase()}
-                   </div>
-                   <span className={styles.userName}>{u.name}</span>
-                </div>
-              )) : (
-                <div className={styles.userRow}>
-                  <div className={styles.avatar}>{task.owner.substring(0,2).toUpperCase()}</div>
-                  <span className={styles.userName}>{task.owner}</span>
+          <TaskGovernance 
+            taskId={task.id}
+            initialColumn={dbAssignment?.column || 'todo'}
+            initialSprintId={dbAssignment?.sprintId || null}
+            initialPriority={dbAssignment?.priority || 'normal'}
+            initialQAApproved={dbAssignment?.qaApproved || false}
+            sprints={task.allSprints || []}
+            isAdminOrGestor={isAdminOrGestor}
+          />
+
+          <div className={styles.card} style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className={styles.sideTitle} style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                 Equipe Alocada
+              </h3>
+              <ExtraAssigneeManager 
+                taskId={task.id} 
+                taskTitle={task.title} 
+                taskClient={task.client} 
+                allUsers={task.allProjectUsers || []} 
+              />
+            </div>
+            
+            <div className={styles.userList}>
+              {/* Prioriza usuários do banco, mas se vazio, mostra o dono do Taskrow */}
+              {task.dbUsers && task.dbUsers.length > 0 ? (
+                task.dbUsers.map((u: any) => (
+                  <div key={u.id} className={styles.premiumUserRow}>
+                    <div className={styles.avatarGlass}>
+                        {u.avatarUrl ? (
+                          <img src={u.avatarUrl} alt={u.name} className={styles.avatarImage} />
+                        ) : (
+                          u.name.substring(0,2).toUpperCase()
+                        )}
+                    </div>
+                    <div className={styles.userInfo}>
+                      <span className={styles.userNamePremium}>{u.name}</span>
+                      <span className={styles.userRoleBadge}>
+                         {u.roles?.includes('GESTOR') ? 'Gestor' : 'Dev Tech'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.premiumUserRow}>
+                  <div className={styles.avatarGlass}>
+                    {task.owner.substring(0,2).toUpperCase()}
+                  </div>
+                  <div className={styles.userInfo}>
+                    <span className={styles.userNamePremium}>{task.owner}</span>
+                    <span className={styles.userRoleBadge}>Owner Taskrow</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -271,10 +365,34 @@ export default async function TaskDetail(props: {
             </div>
             <div className={styles.progressBarWrapper}>
               <div 
-                className={styles.progressBarFill} 
-                style={{ width: `${progressPercentage}%` }}
+                className={`${styles.progressBarFill}${isOverBudget ? ` ${styles.progressBarFillOver}` : ''}`}
+                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
               ></div>
             </div>
+            {/* Breakdown por usuário */}
+            {task.timeEntries && task.timeEntries.length > 0 && (
+              <div className={styles.effortBreakdown}>
+                {task.timeEntries.map((entry: any) => (
+                  <div key={entry.id} className={styles.effortRow}>
+                    <div className={styles.effortAvatar}>
+                      {entry.user.avatarUrl
+                        ? <img src={entry.user.avatarUrl} alt={entry.user.name} className={styles.avatarImage} />
+                        : entry.user.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className={styles.effortUserInfo}>
+                      <span className={styles.effortUserName}>{entry.user.name}</span>
+                      <span className={styles.effortBarOuter}>
+                        <span
+                          className={styles.effortBarInner}
+                          style={{ width: `${task.hoursEstimated > 0 ? Math.min((entry.hours / task.hoursEstimated) * 100, 100) : 0}%` }}
+                        />
+                      </span>
+                    </div>
+                    <span className={styles.effortHours}>{entry.hours}h</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={styles.card}>

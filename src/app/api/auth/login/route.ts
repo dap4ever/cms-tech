@@ -17,16 +17,21 @@ export async function POST(request: Request) {
 
     if (!user) {
       console.log('User not found in DB for email:', email);
-      return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+      return NextResponse.json({ error: 'Usuário não encontrado. Verifique o e-mail informado.', code: 'USER_NOT_FOUND' }, { status: 404 });
     }
 
     console.log('User found in DB:', user.email, 'with roles:', user.roles);
+
+    if ((user as any).isBlocked) {
+      console.log('Blocked user attempted login:', email);
+      return NextResponse.json({ error: 'Usuário bloqueado. Entre em contato com o administrador.', code: 'USER_BLOCKED' }, { status: 403 });
+    }
 
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
       console.log('Invalid password for user:', email);
-      return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+      return NextResponse.json({ error: 'Senha incorreta. Verifique e tente novamente.', code: 'WRONG_PASSWORD' }, { status: 401 });
     }
 
     console.log('Login successful for user:', email);
@@ -46,7 +51,9 @@ export async function POST(request: Request) {
         name: user.name, 
         roles: user.roles,
         avatarUrl: (user as any).avatarUrl,
-        mustChangePassword: (user as any).mustChangePassword
+        mustChangePassword: (user as any).mustChangePassword,
+        firstAccessDone: (user as any).firstAccessDone ?? true,
+        skills: (user as any).skills ?? [],
       } 
     });
 

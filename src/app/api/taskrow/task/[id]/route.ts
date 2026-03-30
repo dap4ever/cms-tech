@@ -107,7 +107,8 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  if (session.roles?.includes('DESENVOLVEDOR') && !session.roles?.includes('GESTOR') && !session.roles?.includes('ADMINISTRADOR')) {
+  const rolesPUT = session.roles as string[] | undefined;
+  if (rolesPUT?.includes('DESENVOLVEDOR') && !rolesPUT?.includes('GESTOR') && !rolesPUT?.includes('ADMINISTRADOR')) {
     return NextResponse.json({ error: 'Desenvolvedores não têm permissão para editar tasks' }, { status: 403 });
   }
 
@@ -122,7 +123,8 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  if (session.roles?.includes('DESENVOLVEDOR') && !session.roles?.includes('GESTOR') && !session.roles?.includes('ADMINISTRADOR')) {
+  const rolesDEL = session.roles as string[] | undefined;
+  if (rolesDEL?.includes('DESENVOLVEDOR') && !rolesDEL?.includes('GESTOR') && !rolesDEL?.includes('ADMINISTRADOR')) {
     return NextResponse.json({ error: 'Apenas Gestores e Gerentes podem excluir tarefas' }, { status: 403 });
   }
 

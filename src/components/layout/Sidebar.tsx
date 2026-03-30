@@ -14,10 +14,13 @@ import {
   Settings,
   GitPullRequest,
   Eye,
-  EyeOff
+  EyeOff,
+  LogOut,
+  X
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/context/AuthContext';
+import { AvatarUploader } from '@/components/user/AvatarUploader';
 
 const navItems = [
   { name: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
@@ -30,9 +33,9 @@ const navItems = [
   { name: 'Caixa de Entrada', route: '/taskrow', icon: Inbox },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-   const { user, isGestor, isAdmin } = useAuth();
+   const { user, isGestor, isAdmin, logout } = useAuth();
   const [hiddenItems, setHiddenItems] = useState<string[]>([]);
   const [isManaging, setIsManaging] = useState(false);
   
@@ -96,15 +99,12 @@ export function Sidebar() {
   });
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       <div className={styles.logoContainer}>
-        <div className={styles.logoIcon}>
-          <div className={styles.f2fLogoMark}>2</div>
-        </div>
-        <div className={styles.logoTextWrapper}>
-          <span className={styles.logoText}>F2F CMS</span>
-          <span className={styles.logoSubtext}>POWERED BY AI</span>
-        </div>
+        <img src="/logo-f2f.png" alt="F2F CMS" className={styles.logoImage} />
+        <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar menu">
+          <X size={20} />
+        </button>
       </div>
 
       <div className={styles.navGroup}>
@@ -156,11 +156,20 @@ export function Sidebar() {
           ) : (
             user ? getInitials(user.name) : '...'
           )}
+          <AvatarUploader />
         </div>
         <div className={styles.userInfo}>
           <span className={styles.userName}>{user?.name || 'Carregando...'}</span>
           <span className={styles.userRole}>{user?.roles?.join(', ') || 'Aguardando...'}</span>
         </div>
+        <button
+          className={styles.logoutBtn}
+          onClick={logout}
+          title="Sair do sistema"
+          aria-label="Sair"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </aside>
   );

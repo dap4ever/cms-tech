@@ -1,22 +1,27 @@
 "use client";
 
-import { Search, Bell, Plus, LogOut, User } from 'lucide-react';
+import { Search, Bell, Plus, LogOut, Menu } from 'lucide-react';
 import Link from 'next/link';
 import styles from './Topbar.module.css';
 import { useAuth } from '@/context/AuthContext';
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
 
   return (
     <header className={styles.topbar}>
-      <div className={styles.searchContainer}>
-        <Search className={styles.searchIcon} size={18} />
-        <input 
-          type="text" 
-          placeholder="Busque por PRs, projetos, tickets..." 
-          className={styles.searchInput}
-        />
+      <div className={styles.leftSection}>
+        <button className={styles.hamburger} onClick={onMenuClick} aria-label="Abrir menu">
+          <Menu size={22} />
+        </button>
+        <div className={styles.searchContainer}>
+          <Search className={styles.searchIcon} size={18} />
+          <input 
+            type="text" 
+            placeholder="Busque por PRs, projetos, tickets..." 
+            className={styles.searchInput}
+          />
+        </div>
       </div>
 
       <div className={styles.actions}>

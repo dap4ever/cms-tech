@@ -14,7 +14,7 @@ export async function GET() {
 
     // Usando queryRaw para evitar problemas se o Prisma Client estiver dessincronizado
     const users = await prisma.$queryRaw<any[]>`
-      SELECT id, email, name, roles, "avatarUrl", "mustChangePassword" FROM "User" WHERE id = ${String(session.userId)} LIMIT 1
+      SELECT id, email, name, roles, "avatarUrl", "mustChangePassword", "firstAccessDone", skills FROM "User" WHERE id = ${String(session.userId)} LIMIT 1
     `;
     
     console.log('[Auth Me] Query result length:', users.length);

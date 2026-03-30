@@ -10,6 +10,8 @@ interface User {
   roles: ('GESTOR' | 'ADMINISTRADOR' | 'DESENVOLVEDOR')[];
   avatarUrl?: string;
   mustChangePassword?: boolean;
+  firstAccessDone?: boolean;
+  skills?: string[];
 }
 
 interface AuthContextType {
@@ -21,6 +23,7 @@ interface AuthContextType {
   isGerente: boolean;
   isDev: boolean;
   isAdmin: boolean;
+  updateUser: (newData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,6 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  const updateUser = (newData: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...newData };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -107,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = isGestor || isGerente;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isGestor, isGerente, isDev, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isGestor, isGerente, isDev, isAdmin, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

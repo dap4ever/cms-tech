@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { GitPullRequest, Plus, Filter, Loader2, CheckCircle } from 'lucide-react';
+import { GitPullRequest, Plus, Filter, Loader2, AlertCircle, 
+  Calendar,
+  Briefcase,
+  Trash2,
+  CheckCircle,
+  PlayCircle
+} from 'lucide-react';
 import styles from './projects.module.css';
 import { KanbanTask } from '@/lib/taskrow';
 import clientsData from '../../../docs/TASKROW_CLIENTS_EXPORT.json';
@@ -31,12 +37,17 @@ export default function Projects() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [taskAssignments, setTaskAssignments] = useState<Record<string, string[]>>({});
   const [selectedDevs, setSelectedDevs] = useState<Record<string, string>>({});
+  const [selectedPriorities, setSelectedPriorities] = useState<Record<string, string>>({});
+  const [sprints, setSprints] = useState<any[]>([]);
+  const [activeSprintId, setActiveSprintId] = useState<string | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<Record<string, boolean>>({});
 
   // Estados dos Filtros (Camada 2)
   const [showingFilters, setShowingFilters] = useState(true); 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState('');
-  const [filterProject, setFilterProject] = useState('');
+  const [filterUser, setFilterUser] = useState('');
+  const [filterGroup, setFilterGroup] = useState('');
 
 
   useEffect(() => {
@@ -74,12 +85,33 @@ export default function Projects() {
         const assignData = await assignRes.json();
         if (assignData.success) {
           const mapping: Record<string, string[]> = {};
+          const failsMapping: Record<string, boolean> = {};
           assignData.assignments.forEach((a: any) => {
             if (a.users && a.users.length > 0) {
               mapping[a.taskId] = a.users.map((u:any) => u.id);
             }
+            if (!a.qaApproved && a.qcMetadata && Array.isArray(a.qcMetadata) && a.qcMetadata.length > 0) {
+              failsMapping[a.taskId] = true;
+            }
           });
           setTaskAssignments(mapping);
+          (window as any)._failsMap = failsMapping; // Mantendo simples para o arquivo legado
+        }
+
+        // 4. Busca Sprints
+        const sprintsRes = await fetch('/api/sprints');
+        const sprintsData = await sprintsRes.json();
+        if (sprintsData.success) {
+          setSprints(sprintsData.sprints);
+          
+          // Identificar sprint ativa (hoje entre startDate e endDate)
+          const now = new Date();
+          const active = sprintsData.sprints.find((s: any) => {
+            const start = new Date(s.startDate);
+            const end = new Date(s.endDate);
+            return now >= start && now <= end;
+          });
+          if (active) setActiveSprintId(active.id);
         }
 
       } catch (err: any) {
@@ -104,8 +136,8 @@ export default function Projects() {
   // LÓGICA DE FILTRAGEM E ORDENAÇÃO (Camada 2)
   // ==========================================
   const filteredTasks = tasks.filter(task => {
-    // 0. Ocultar as que já foram aprovadas (movidas para Projetos)
-    if (approvedTasks.has(task.id)) return false;
+    // 0. Ocultar as que já foram aprovadas (Ocultar apenas para DEVS, Gestor/Admin vê tudo)
+    if (!isAdmin && !isGestor && approvedTasks.has(task.id)) return false;
 
     // 1. Regra de Atribuição (NOVO)
     // Se for Desenvolvedor (e não Admin/Gestor), vê apenas o que está assinado para ele no banco
@@ -115,15 +147,29 @@ export default function Projects() {
     if (isDeveloperOnly) {
       if (!user?.id || !assignedUserIds.includes(user.id)) return false;
     } else {
-      // Para Gestores: Filtro opcional? 
-      // Por enquanto mostra tudo da Raissa/Ingrid/Kaique por padrão para não poluir
-      const rawLogin = task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '';
-      const login = rawLogin.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const isTechOwner = login.includes('ingrid') || login.includes('raissa') || login.includes('kaique');
-      if (!isTechOwner) return false;
+      // Para Gestores: Se não houver filtros ativos, foca nos Tech Owners (padrão)
+      const hasStrictFilters = searchTerm || filterClient || filterUser || filterGroup;
+      if (!hasStrictFilters) {
+        const rawLogin = task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '';
+        const login = rawLogin.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const isTechOwner = login.includes('ingrid') || login.includes('raissa') || login.includes('kaique');
+        if (!isTechOwner) return false;
+      }
     }
 
-    // 2. Filtro de Busca (Title, Client, TaskID)
+    // 2. Filtro de Grupo Taskrow (Novo)
+    if (filterGroup) {
+       const functionGroup = String(task.rawData?.functionGroupName || task.rawData?.FunctionGroupName || task.rawData?.groupName || task.rawData?.GroupName || '').toLowerCase();
+       if (!functionGroup.includes(filterGroup.toLowerCase())) return false;
+    }
+
+    // 3. Filtro de Usuário Taskrow (Novo)
+    if (filterUser) {
+       const rawLogin = String(task.rawData?.ownerUserLogin || task.rawData?.OwnerUserLogin || task.assigneeLogin || '').toLowerCase();
+       if (!rawLogin.includes(filterUser.toLowerCase())) return false;
+    }
+
+    // 4. Filtro de Busca (Title, Client, TaskID)
     if (searchTerm) {
        const term = searchTerm.toLowerCase();
        const mId = task.id.toLowerCase();
@@ -138,11 +184,7 @@ export default function Projects() {
        if (cNick !== filterClient.toLowerCase() && !cNick.includes(filterClient.toLowerCase())) return false;
     }
 
-    // 4. Filtro de Projeto (Job) Mapeado contra JobID do RAW
-    if (filterProject) {
-       const jID = task.rawData?.jobID || task.rawData?.JobID;
-       if (jID && jID.toString() !== filterProject) return false;
-    }
+
 
 
 
@@ -160,6 +202,7 @@ export default function Projects() {
 
   const handleApprove = async (task: KanbanTask) => {
     const targetUserId = selectedDevs[task.id];
+    const priority = selectedPriorities[task.id] || 'normal';
     
     if (!targetUserId) {
       alert('Selecione um desenvolvedor para atribuir esta tarefa.');
@@ -174,11 +217,16 @@ export default function Projects() {
           taskId: task.id,
           title: task.title,
           client: task.client,
-          targetUserId
+          targetUserId,
+          sprintId: activeSprintId,
+          priority
         })
       });
 
-      if (!res.ok) throw new Error('Erro ao salvar atribuição');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao salvar atribuição');
+      }
 
       // Atualiza estado local adicionando no array
       setTaskAssignments(prev => {
@@ -188,6 +236,7 @@ export default function Projects() {
         }
         return prev;
       });
+      setPendingApproval(prev => { const n = { ...prev }; delete n[task.id]; return n; });
       setApprovedTasks(prev => {
          const next = new Set(prev);
          next.add(task.id);
@@ -208,10 +257,46 @@ export default function Projects() {
     }
   };
 
+  const handleUnassign = async (taskId: string) => {
+    if (!confirm('Deseja DESATRIBUIR esta tarefa? Ela será removida do banco de dados e do Kanban.')) return;
+
+    try {
+      const res = await fetch(`/api/tasks/assign?taskId=${taskId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Erro ao desatribuir tarefa');
+
+      // Atualiza estado local
+      setTaskAssignments(prev => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+      setApprovedTasks(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+      
+      // Remover do localStorage tab projetos legada se houver
+      const savedInternal = localStorage.getItem('f2f_internal_projects');
+      if (savedInternal) {
+         let existing = JSON.parse(savedInternal);
+         existing = existing.filter((t:any) => t.id !== taskId);
+         localStorage.setItem('f2f_internal_projects', JSON.stringify(existing));
+      }
+
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    }
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setFilterClient('');
-    setFilterProject('');
+    setFilterUser('');
+    setFilterGroup('');
   }
 
   return (
@@ -244,18 +329,24 @@ export default function Projects() {
               className={styles.filterInput}
             />
 
-            {/* Por Empresa (Usando ClientNickName como valor de busca) */}
             <select className={styles.filterSelect} value={filterClient} onChange={(e) => setFilterClient(e.target.value)}>
               <option value="">Por empresa</option>
               {clientsData.sort((a:any, b:any) => a.ClientName.localeCompare(b.ClientName)).map((c: any) => 
                  <option key={c.ClientID} value={c.ClientNickName}>{c.ClientName}</option>
               )}
             </select>
-            {/* Por Projeto */}
-            <select className={styles.filterSelect} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
-              <option value="">Por projeto</option>
-              {jobsData.sort((a:any, b:any) => a.JobDisplayTitle.localeCompare(b.JobDisplayTitle)).map((j: any) => 
-                 <option key={j.JobID} value={j.JobID}>{j.JobDisplayTitle}</option>
+            
+            <select className={styles.filterSelect} value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
+              <option value="">Por Responsável</option>
+              {usersData.filter((u:any) => !u.Inactive).sort((a:any, b:any) => a.FullName.localeCompare(b.FullName)).map((u: any) => 
+                 <option key={u.UserID} value={u.UserLogin}>{u.FullName}</option>
+              )}
+            </select>
+
+            <select className={styles.filterSelect} value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)}>
+              <option value="">Por Grupo</option>
+              {groupsData.FunctionGroups.sort().map((g: string) => 
+                 <option key={g} value={g}>{g}</option>
               )}
             </select>
             
@@ -276,7 +367,6 @@ export default function Projects() {
         </div>
       ) : (
         <>
-          {/* Métricas como as do screenshot */}
           <div className={styles.metricsBar}>
             <div className={styles.metricCard}>
               <div className={styles.metricValue}>{filteredTasks.length}</div>
@@ -296,7 +386,6 @@ export default function Projects() {
             </div>
           </div>
 
-          {/* Tabela de Listagem */}
           <div className={styles.taskTable}>
             <div className={styles.tableHead}>
               <div>Tarefa</div>
@@ -309,34 +398,37 @@ export default function Projects() {
             </div>
             
             {filteredTasks.map(task => {
-              // Determina cores das tags
               const reqBadge = task.rawData?.requestTypeAcronym ? `[${task.rawData?.requestTypeAcronym}]` : '[TEC]';
               const reqName = task.rawData?.requestTypeName || 'Solicitação de Tecnologia';
               const jobTitle = task.rawData?.jobTitle || task.rawData?.JobTitle || task.client;
               const isLate = new Date(task.dueDate) < new Date();
               const datePillClass = `${styles.datePill} ${!isLate ? styles.onTime : ''}`;
+              const assignedIds = taskAssignments[task.id] || [];
+              const isTaskAssigned = assignedIds.length > 0;
+              const isPending = pendingApproval[task.id];
+              const assignedUser = isTaskAssigned ? allUsers.find(u => u.id === assignedIds[0]) : null;
 
               return (
                 <div key={task.id} style={{textDecoration: 'none', color: 'inherit'}}>
                   <div className={styles.taskRow} onClick={() => window.location.href = `/taskrow/task/${task.id}`}>
-                    {/* 1. Tarefa */}
                     <div className={styles.cellCol}>
                       <div className={styles.cellTitle}>
                         <GitPullRequest size={14} style={{color:'var(--text-secondary)'}}/>
                         {task.id.replace('TR-','#')} | {task.title}
+                        {(window as any)._failsMap?.[task.id] && (
+                           <AlertCircle size={14} color="#ef4444" style={{ marginLeft: 8 }} />
+                        )}
                       </div>
                       <div className={styles.cellSubtitle}>
                          {task.id} {task.title}
                       </div>
                     </div>
 
-                    {/* 2. Empresa / Projeto */}
                     <div className={styles.cellCol}>
                       <div className={styles.cellTitle}>{task.client}</div>
                       <div className={styles.cellSubtitle}>#{task.rawData?.jobNumber || task.rawData?.JobNumber || '00'} {jobTitle}</div>
                     </div>
 
-                    {/* 3. Solicitação */}
                     <div className={styles.cellCol}>
                       <div className={styles.cellTitle}>
                         <span style={{color: '#f59e0b', marginRight: 4}}>{reqBadge}</span> {reqName}
@@ -346,7 +438,6 @@ export default function Projects() {
                       </div>
                     </div>
 
-                    {/* 4. Reponsável / Prioridade */}
                     <div className={styles.cellCol}>
                       <div className={styles.cellTitle}>
                          {task.rawData?.ownerUserLogin || task.assigneeLogin}
@@ -357,49 +448,101 @@ export default function Projects() {
                       </div>
                     </div>
 
-                    {/* 5. Fase / Etapa */}
                     <div className={styles.cellCol}>
                       <div className={styles.cellTitle} style={{fontWeight: 500}}>
                          {task.statusOriginal}
                       </div>
                     </div>
 
-                    {/* 6. Prazo */}
                     <div className={styles.cellCol}>
                       <div className={datePillClass}>
                         {new Date(task.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                       </div>
                     </div>
 
-                    {/* 7. Ação */}
                     <div className={styles.cellCol} onClick={(e) => e.stopPropagation()}>
                        { (isAdmin || isGestor) ? (
-                         <div className={styles.assignActionGroup}>
-                           <select 
-                             className={styles.devSelect}
-                             value={selectedDevs[task.id] || (taskAssignments[task.id] && taskAssignments[task.id][0]) || ''}
-                             onChange={(e) => setSelectedDevs(prev => ({ ...prev, [task.id]: e.target.value }))}
-                           >
-                             <option value="">Atribuir a...</option>
-                             {allUsers.filter(u => u.roles.includes('DESENVOLVEDOR')).map(u => (
-                               <option key={u.id} value={u.id}>{u.name}</option>
-                             ))}
-                           </select>
-                           <button 
-                              className={styles.approveBtn} 
-                              onClick={() => handleApprove(task)}
-                              title="Confirmar Atribuição e mover para Projetos"
-                            >
-                              <CheckCircle size={14} /> Atribuir
-                            </button>
-                         </div>
+                         isTaskAssigned ? (
+                           <div className={styles.assignActionGroup}>
+                             <div className={styles.assignedBadge}>
+                               <CheckCircle size={14} />
+                               {assignedUser?.name || 'Atribuída'}
+                             </div>
+                             <button
+                               className={styles.deleteBtn}
+                               onClick={() => handleUnassign(task.id)}
+                               title="Desatribuir e remover do Projetos"
+                             >
+                               <Trash2 size={14} />
+                             </button>
+                           </div>
+                         ) : isPending ? (
+                           <div className={styles.assignActionGroup}>
+                             <select
+                               className={styles.devSelect}
+                               value={selectedDevs[task.id] || ''}
+                               onChange={(e) => setSelectedDevs(prev => ({ ...prev, [task.id]: e.target.value }))}
+                               style={{ width: '130px' }}
+                             >
+                               <option value="">Atribuir a...</option>
+                               {allUsers.filter(u => u.roles.includes('DESENVOLVEDOR')).map(u => (
+                                 <option key={u.id} value={u.id}>{u.name}</option>
+                               ))}
+                             </select>
+                             <select
+                               className={styles.devSelect}
+                               value={selectedPriorities[task.id] || 'normal'}
+                               onChange={(e) => setSelectedPriorities(prev => ({ ...prev, [task.id]: e.target.value }))}
+                               style={{ width: '90px', marginLeft: '4px' }}
+                             >
+                               <option value="low">Baixa</option>
+                               <option value="normal">Normal</option>
+                               <option value="high">Alta</option>
+                               <option value="critical">Crítica</option>
+                             </select>
+                             <button
+                               className={styles.approveBtn}
+                               onClick={() => handleApprove(task)}
+                               title="Confirmar Atribuição e mover para Projetos"
+                             >
+                               <CheckCircle size={14} /> Atribuir
+                             </button>
+                             <button
+                               className={styles.cancelApproveBtn}
+                               onClick={() => setPendingApproval(prev => { const n = {...prev}; delete n[task.id]; return n; })}
+                               title="Cancelar"
+                             >
+                               ✕
+                             </button>
+                           </div>
+                         ) : (
+                           <div className={styles.assignActionGroup}>
+                             <button
+                               className={styles.approveStartBtn}
+                               onClick={() => setPendingApproval(prev => ({ ...prev, [task.id]: true }))}
+                             >
+                               <PlayCircle size={14} /> Aprovar para Início
+                             </button>
+                           </div>
+                         )
                        ) : (
-                         <div className={styles.assignedBadge}>
-                           <CheckCircle size={14} /> Assinada para você
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                           <div className={styles.assignedBadge}>
+                             <CheckCircle size={14} /> Assinada para você
+                           </div>
+                           {(taskAssignments[task.id] && taskAssignments[task.id].length > 0) && (
+                             <button
+                               className={styles.deleteBtn}
+                               onClick={() => handleUnassign(task.id)}
+                               title="Desatribuir e excluir do Projetos"
+                               style={{ background: 'transparent' }}
+                             >
+                               <Trash2 size={14} />
+                             </button>
+                           )}
                          </div>
                        )}
                     </div>
-
                   </div>
                 </div>
               );

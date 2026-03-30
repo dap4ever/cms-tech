@@ -15,7 +15,8 @@ export async function GET() {
       include: {
         users: {
           select: { id: true, name: true, email: true, avatarUrl: true }
-        }
+        },
+        sprint: true
       }
     });
 

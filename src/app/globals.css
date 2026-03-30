@@ -47,6 +47,16 @@ button {
   font-family: inherit;
 }
 
+/* Fix nativo: impede popup branco do sistema em todos os <select> */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
 /* Scrollbar Style */
 ::-webkit-scrollbar {
   width: 8px;
